@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Repo-only `examples/ship.js`: a complete, zero-dep, consent-gated reference
+  uploader for shipping the JSONL to a server you control — the transport layer
+  flightlog deliberately does not provide. Not shipped in the package, not a
+  dependency; copy and adapt.
+
+### Changed
+- Docs: `flightlog.context.md` states plainly that flightlog never uploads and
+  points to `examples/ship.js` for a build-it-yourself, consent-gated uploader.
+
 ## [0.2.0] - 2026-05-31
 
 Additive, backward-compatible — driven by first-adopter (`gitdone`) integration

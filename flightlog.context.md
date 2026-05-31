@@ -165,6 +165,15 @@ escape the net during startup.
 - **Not a general logger** — errors only, no info/warn levels.
 - **No restart logic** — that's your supervisor's job.
 
+**Sending logs to yourself.** flightlog never uploads — it records locally and that
+is the end of its job. If you want logs shipped back (e.g. a customer "send
+diagnostics" opt-in), build it as a **separate, consent-gated layer that reads the
+JSONL** — never fold transport into flightlog. A complete, zero-dep reference
+uploader lives in the repo at
+[`examples/ship.js`](https://github.com/hamr0/flightlog/blob/main/examples/ship.js)
+(repo-only — not shipped in the package, not a dependency). Copy and adapt it; the
+moment logs land on your server you become the data controller, so disclose it.
+
 ## Threat model
 
 flightlog never harvests context — but the JSONL **will** contain whatever you
