@@ -24,7 +24,7 @@
 
 flightlog is the ~20-line global error net — packaged once, audited, so it wires into every app the same way. `install()` once: it registers the handlers, runs a boot-time writability check, and hands you `capture()` (async) plus `captureSync()` (for log-then-exit in short-lived processes). Every uncaught exception, unhandled rejection, and value you pass to `capture()` becomes one normalized JSONL line.
 
-Same build ethos as the [bare suite](#where-this-sits) — embed it, don't run it; zero deps; no daemon, no SaaS, no telemetry — but flightlog is **substrate for your own apps**, not agent infrastructure. Closest sibling: [mailproof](https://github.com/hamr0/mailproof).
+Same build ethos as the bare suite — embed it, don't run it; zero deps; no daemon, no SaaS, no telemetry — but flightlog is **substrate for your own apps**, not agent infrastructure. Closest sibling: [mailproof](https://github.com/hamr0/mailproof).
 
 It owns exactly one layer: *catch → normalize → append*. It is **not** a general logger (no info/warn levels — that's pino/winston), **not** aggregation or dedup (that's `jq` when you need it), **not** breadcrumbs or auto-captured context (the surveillance payload a privacy tool refuses), and ships **no UI, server, or reader** — the JSONL is the whole read surface. It never harvests context: it logs only what you hand it.
 
@@ -97,18 +97,6 @@ One flat JSON object per error — `kind` is how it was caught, everything after
 | **[Integration Guide](flightlog.context.md)** | The complete adopter contract — options, API, record shape, gotchas, threat model. Hand it to your AI assistant. |
 | **[PRD](docs/01-product/2026-05-31-prd.md)** | Locked decisions + *why*, success criteria, the refusals, build order. *(repo-only)* |
 | **[CHANGELOG](CHANGELOG.md)** | keep-a-changelog; an entry every release. |
-
-## Where this sits
-
-flightlog is **substrate** — it serves the apps you run, not AI agents. That's a different layer from the **bare suite**, which is zero-dep *agent* infrastructure. Same vanilla-ESM ethos, deliberately different audience:
-
-| | the bare suite | **flightlog** |
-|---|---|---|
-| **Serves** | AI agents | your own apps (addypin, gitdone, latefyi, …) |
-| **Examples** | [bareagent](https://github.com/hamr0/bareagent) · [barebrowse](https://github.com/hamr0/barebrowse) · [baremobile](https://github.com/hamr0/baremobile) · [bareguard](https://github.com/hamr0/bareguard) | flightlog · [mailproof](https://github.com/hamr0/mailproof) |
-| **Shape** | embed, don't run · zero deps · no telemetry | embed, don't run · zero deps · no telemetry |
-
-flightlog deliberately carries **no bare-suite badge** — it's a sibling in spirit, not a member.
 
 ## License
 

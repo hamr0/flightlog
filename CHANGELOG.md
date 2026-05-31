@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- Docs: `flightlog.context.md` **API** section was stale — it still showed
+  `install(opts?) → { capture }` and "returns `capture`" after `captureSync` was
+  added in 0.2.0. Now `{ capture, captureSync }`, with the `bootCheck: false`
+  boot-throw caveat noted.
+
+### Changed
+- Docs: added a `bootCheck: false` gotcha (fail-loud vs silent degradation);
+  de-anchored the context.md status line from a specific version. README: removed
+  the "Where this sits" section.
+
 ## [0.3.0] - 2026-05-31
 
 Additive, backward-compatible — second-round `gitdone` feedback (per-message

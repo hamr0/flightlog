@@ -9,8 +9,8 @@ This file is the complete contract: every option, the whole API, what flightlog
 deliberately does **not** do, the gotchas, and the threat model. If you read one
 file before adopting, read this one.
 
-> **Status:** `0.1.0` is the first functional release. `0.0.1` is a name
-> placeholder that throws on import — don't depend on it.
+> **Status:** functional since `0.1.0` (see the CHANGELOG for the current release).
+> `0.0.1` is a name placeholder that throws on import — don't depend on it.
 
 ## Install
 
@@ -75,9 +75,9 @@ escape the net during startup.
 
 ## API
 
-- **`install(opts?) → { capture }`** — registers the global handlers, runs the
-  boot-time writability check (throws *now* if `file`'s path can't be written),
-  and returns `capture`.
+- **`install(opts?) → { capture, captureSync }`** — registers the global handlers,
+  runs the boot-time writability check (throws *now* if `file`'s path can't be
+  written, unless `bootCheck: false`), and returns both capture functions.
 - **`capture(err, extra?) → void`** — normalize any thrown value and append one
   line, merging `{ ...context, ...extra }` (per-call `extra` wins on key clashes).
   **Async / fire-and-forget** — returns before the line is durably on disk. Never
@@ -162,6 +162,13 @@ escape the net during startup.
   entry points) and the latest call wins: it swaps in the new options and rebinds
   `capture` without stacking a second handler pair — so errors are never logged
   twice and process listeners don't leak.
+- **`bootCheck: false` trades fail-loud for silent degradation.** With it off, an
+  unwritable sink at boot only warns *once* to stderr; if the path never becomes
+  writable, every error after that is silently dropped (the swallow-on-write
+  contract) with no further noise. That's the right trade for a short-lived process
+  that must not die for a broken *error* sink — but it means you can lose error
+  capture without a crash. Keep the default (`true`) for long-lived servers, where
+  failing loud at deploy is exactly what you want.
 
 ## What flightlog will not do (the refusals *are* the product)
 
