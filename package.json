@@ -14,7 +14,8 @@
     "src/",
     "types/",
     "README.md",
-    "flightlog.context.md"
+    "flightlog.context.md",
+    "CHANGELOG.md"
   ],
   "engines": {
     "node": ">=18"
