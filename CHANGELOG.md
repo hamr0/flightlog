@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-05-31
+
+Documentation only — no code or behavior change.
+
 ### Fixed
 - Docs: `flightlog.context.md` **API** section was stale — it still showed
   `install(opts?) → { capture }` and "returns `capture`" after `captureSync` was
@@ -102,7 +106,8 @@ First functional release — the global error net, packaged once (see the PRD in
   package throws on import directing users to the repo. Reserves `flightlog`
   while `0.1.0` is built.
 
-[Unreleased]: https://github.com/hamr0/flightlog/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/hamr0/flightlog/compare/v0.3.1...HEAD
+[0.3.1]: https://github.com/hamr0/flightlog/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/hamr0/flightlog/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/hamr0/flightlog/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/hamr0/flightlog/compare/v0.0.1...v0.1.0
