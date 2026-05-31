@@ -12,6 +12,17 @@ file before adopting, read this one.
 > **Status:** functional since `0.1.0` (see the CHANGELOG for the current release).
 > `0.0.1` is a name placeholder that throws on import — don't depend on it.
 
+## What flightlog is and is not
+
+- **It is** a ~zero-dep crash recorder: global handlers + a `capture()` you call,
+  each error appended as one line to a local JSONL file, with size-based rotation.
+  The local, private alternative to a hosted error-monitoring SaaS.
+- **It is not** a general logger, an aggregator, a UI/server/reader, or an
+  uploader. It never phones home and never auto-captures context — it logs only
+  what you pass it. The full reasoning is in
+  [What flightlog will not do](#what-flightlog-will-not-do-the-refusals-are-the-product)
+  below.
+
 ## Install
 
 ```js

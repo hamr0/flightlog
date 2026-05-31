@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Docs: `flightlog.context.md` now opens with a **What flightlog is and is not**
+  section, putting the is/not boundary in the first screenful (per
+  `LIBRARY_CONVENTIONS.md` §3) instead of only at the refusals section below.
+
 ## [0.3.1] - 2026-05-31
 
 Documentation only — no code or behavior change.
