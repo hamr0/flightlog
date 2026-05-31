@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Docs: `flightlog.context.md` now states the **Node.js ≥ 18** requirement and
+  that TypeScript types ship (no `@types` package needed), and recommends calling
+  `install()` as early as possible so the handlers are registered before other
+  code can throw. Documentation only — no code or behavior change.
+
 ## [0.1.0] - 2026-05-31
 
 First functional release — the global error net, packaged once (see the PRD in

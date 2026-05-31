@@ -30,6 +30,15 @@ try { risky(); } catch (err) { capture(err, { where: 'checkout', userId }); }
 Three lines wire a whole app: import, `install`, and a `capture` at any boundary
 you want to survive without crashing.
 
+Requires **Node.js ≥ 18**. Ships TypeScript types generated from JSDoc, so
+`import { install } from 'flightlog'` gives you autocomplete and type-checking out
+of the box — no `@types/flightlog` package needed.
+
+**Call `install()` as early as possible** — ideally the first thing your entry
+file does, before other imports or setup can run. The global handlers only catch
+what throws *after* they're registered, so the earlier you install, the less can
+escape the net during startup.
+
 ## Options
 
 | Option | Type | Default | Meaning |
