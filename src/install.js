@@ -15,18 +15,20 @@ let activeRejection = null;
 /**
  * Install the global error net. Registers `uncaughtException` and
  * `unhandledRejection` handlers, runs the boot-time writability check (throws here
- * on a bad path), and returns `{ capture, captureSync }`. Idempotent: calling it
- * again swaps in the new options and rebinds the handlers without duplicating them.
+ * on a bad path unless `bootCheck:false`), and returns `{ capture, captureSync }`.
+ * Idempotent: calling it again swaps in the new options and rebinds the handlers
+ * without duplicating them.
  *
  * @param {InstallOptions} [opts]
  * @returns {{ capture: (err: unknown, extra?: Object) => void, captureSync: (err: unknown, extra?: Object) => void }}
  */
 export function install(opts = {}) {
-  const { file, context = {}, exitOnUncaught = true, exitOnRejection = false, maxBytes } = opts;
+  const { file, context = {}, exitOnUncaught = true, exitOnRejection = false, bootCheck = true, maxBytes } = opts;
 
-  // Create the sink first: its boot check throws *here* on a bad path, before any
-  // handler is registered — fail loud at install, not in the dark later.
-  const s = sink({ file, maxBytes });
+  // Create the sink first: by default its boot check throws *here* on a bad path,
+  // before any handler is registered — fail loud at install, not in the dark later.
+  // bootCheck:false makes that non-fatal (warn once, degrade) for short-lived procs.
+  const s = sink({ file, maxBytes, bootCheck });
 
   /** Manual capture at a boundary. Fire-and-forget (never throws, never exits). */
   const capture = (err, extra = {}) => {

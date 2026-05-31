@@ -32,7 +32,9 @@ to them.
 - **Default-out on context.** flightlog never harvests; it logs only what the
   adopter passes. Mechanism in the lib, policy in the adopter.
 - **Never becomes the bug.** A write failure is swallowed (app never crashes) but
-  surfaced once to stderr.
+  surfaced once to stderr. The *one* exception is the boot-time writability check,
+  which is fatal by default (fail loud at deploy) — but as of 0.3.0 `bootCheck:false`
+  makes even that non-fatal for short-lived/per-invocation processes (PRD §14.1).
 
 ## Most-litigated refusals (don't re-add these without re-opening the PRD)
 

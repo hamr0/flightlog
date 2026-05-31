@@ -22,21 +22,20 @@ const FILE_MODE = 0o600;
  * @property {string} [file]  JSONL path. Omit → write to stderr (no rotation).
  * @property {number} [maxBytes=5000000]  Rotate when a write would cross this;
  *   `0` disables rotation.
+ * @property {boolean} [bootCheck=true]  Whether an unwritable path at boot is fatal
+ *   (`true` → throw here) or non-fatal (`false` → warn once, then degrade).
  */
 
 /**
- * Build a sink. Performs the boot-time writability check eagerly: a misconfigured
- * path throws *here*, at install, not in the dark at the first real error.
+ * Build a sink. Performs the boot-time writability check eagerly. By default a
+ * misconfigured path throws *here*, at install, not in the dark at the first real
+ * error. With `bootCheck:false` the same failure is warned once and the sink
+ * degrades to the normal swallow-on-write contract instead of throwing.
  * @param {SinkOptions} [opts]
  * @returns {{ write: (record: Object) => Promise<void>, writeSync: (record: Object) => void }}
  */
-export function sink({ file, maxBytes = DEFAULT_MAX_BYTES } = {}) {
+export function sink({ file, maxBytes = DEFAULT_MAX_BYTES, bootCheck = true } = {}) {
   if (!file) return stderrSink();
-
-  // Boot-time writability check — fail loud now. mkdir the parent, then probe an
-  // append (creates the file if missing; throws EACCES/EROFS/ENOTDIR/… on a bad path).
-  mkdirSync(dirname(file), { recursive: true });
-  appendFileSync(file, '', { mode: FILE_MODE });
 
   let warned = false;
 
@@ -49,6 +48,20 @@ export function sink({ file, maxBytes = DEFAULT_MAX_BYTES } = {}) {
       process.stderr.write(`flightlog: write to ${file} failed${code}: ${err && err.message}\n`);
     } catch { /* even stderr is gone — last resort: stay silent rather than crash */ }
   };
+
+  // Boot-time writability check — mkdir the parent, then probe an append (creates
+  // the file if missing; surfaces EACCES/EROFS/ENOTDIR/… on a bad path). Default is
+  // FATAL (throw here): fail loud at startup, not in the dark. With bootCheck:false
+  // it warns once and degrades to swallow-on-write — for short-lived/per-invocation
+  // processes (cron, mail pipes) where a fatal boot would take down the real work,
+  // not just the error sink.
+  try {
+    mkdirSync(dirname(file), { recursive: true });
+    appendFileSync(file, '', { mode: FILE_MODE });
+  } catch (err) {
+    if (bootCheck) throw err;
+    warnOnce(err);
+  }
 
   /** If appending `byteLength` would cross the cap, roll current → `.1`. */
   const rotateIfNeeded = (byteLength) => {

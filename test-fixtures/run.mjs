@@ -27,6 +27,15 @@ if (scenario === 'install-badpath') {
   process.exit(0); // unreachable if boot check works
 }
 
+// bootCheck:false on the same bad path must NOT throw — warn once and continue,
+// so a short-lived process keeps doing its real work when only the sink is broken.
+if (scenario === 'install-badpath-nonfatal') {
+  const { capture } = install({ file, bootCheck: false });
+  capture(new Error('after bad boot')); // also swallowed (sink unwritable), no throw
+  process.stdout.write('survived\n');
+  process.exit(0);
+}
+
 const exitOnUncaught = exitFlag !== 'false';
 const exitOnRejection = scenario === 'rejection-fatal';
 const withContext = scenario !== 'manual-bare';

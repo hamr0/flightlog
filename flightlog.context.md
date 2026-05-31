@@ -70,6 +70,7 @@ escape the net during startup.
 | `context` | `object` | `{}` | Static fields merged into **every** record. You choose these — flightlog never auto-harvests anything (see Refusals). |
 | `exitOnUncaught` | `boolean` | `true` | On an uncaught exception: log synchronously, then `process.exit(1)` so a supervisor restarts you clean. Set `false` for CLIs/desktop apps that should log-and-stay-alive. |
 | `exitOnRejection` | `boolean` | `false` | On an unhandled rejection: log **synchronously**, then `process.exit(1)`. Default `false` keeps rejections log-only (and suppresses Node's default crash). Set `true` for **short-lived processes** (cron, pipe transports) that must die non-zero on a stray rejection instead of silently exiting `0`. See the rejection gotcha below. |
+| `bootCheck` | `boolean` | `true` | Whether an unwritable `file` at install is **fatal**. `true` (default) → `install()` throws, failing loud at startup. `false` → warn once to stderr and continue (the sink degrades to swallow-on-write). Set `false` for **short-lived/per-invocation processes** (cron, mail pipes) where a fatal boot would take down the real work, not just the error sink. See the boot-check note below. |
 | `maxBytes` | `number` | `5_000_000` | Rotate the file when a write would cross this size. `0` disables rotation. |
 
 ## API
@@ -126,7 +127,16 @@ escape the net during startup.
   stderr can't turn the logger into the bug.
 - **Boot-time check.** `install()` creates the parent dir and probes a write
   immediately, so a misconfigured path fails **loudly at startup**, not silently
-  at your first real error.
+  at your first real error. This is the one place flightlog is allowed to crash
+  your app — appropriate for a long-lived server (you find out once, at deploy).
+  For a **short-lived / per-invocation process** (a cron job, a mail pipe that runs
+  once per message) a fatal boot is wrong: an unwritable error sink would take down
+  the actual work — e.g. a Postfix pipe exiting non-zero defers *all* mail. Set
+  **`bootCheck: false`** there: the boot failure is warned once to stderr and the
+  sink degrades to its normal swallow-on-write behavior, so the real work proceeds.
+  *(Note: for a mail pipe, deferring is often the safer choice — queued mail is
+  retried, not lost — so weigh "defer until fixed" against "deliver without error
+  capture" before flipping it.)*
 
 ## Gotchas
 

@@ -125,3 +125,16 @@ test('bad path: install() throws loud at the boot check (non-zero exit)', (t) =>
   assert.notEqual(res.status, 0, 'a misconfigured path fails at install, not silently');
   assert.match(res.stderr, /ENOTDIR|EEXIST|ENOENT/);
 });
+
+test('bad path with bootCheck:false: install() does NOT throw — warns once and continues', (t) => {
+  // gitdone's per-message shape: a fatal boot would defer all mail. bootCheck:false
+  // keeps the process alive so the real work proceeds; the broken sink just warns.
+  const dir = tmp(t);
+  const blocker = join(dir, 'blocker');
+  writeFileSync(blocker, 'x');
+  const badFile = join(blocker, 'sub', 'errors.jsonl');
+  const res = spawnSync(process.execPath, [FIXTURE, badFile, 'install-badpath-nonfatal'], { encoding: 'utf8' });
+  assert.equal(res.status, 0, 'a short-lived process survives an unwritable sink at boot');
+  assert.match(res.stdout, /survived/, 'execution continued past install()');
+  assert.match(res.stderr, /flightlog: write to .* failed.*(ENOTDIR|EEXIST|ENOENT|EACCES)/, 'the broken sink is surfaced once on stderr');
+});

@@ -46,6 +46,7 @@ const { capture, captureSync } = install({
   context: { app: "myapp", release: "v1.4.2" }, // static, you choose — never auto-harvested
   exitOnUncaught: true,                         // default; false = log-and-stay-alive (CLI/desktop)
   exitOnRejection: false,                       // default; true = fatal rejections (short-lived procs)
+  bootCheck: true,                              // default; false = warn (don't throw) if sink unwritable
   maxBytes: 5_000_000,                          // default 5 MB; 0 disables rotation
 });
 
@@ -84,9 +85,10 @@ One flat JSON object per error — `kind` is how it was caught, everything after
 | **non-Error throws** (`throw "x"`, objects, `null`) | described faithfully, given a stack synthesized at the *call site* — not flightlog's internals |
 | **disk growth** | size cap + rotation: at `maxBytes` the file rolls to `.1` (current + one previous, bounded ~2×). `0` disables |
 | **broken sink** (perms / read-only / full disk) | swallowed — never crashes your app — and surfaced once to stderr with the errno, reset on recovery |
+| **boot-time check** | `install()` probes the sink and, by default, throws on a bad path — fail loud at startup. `bootCheck: false` warns-once instead, for short-lived/per-invocation processes (cron, mail pipes) where a fatal boot would take down the real work |
 | **file perms** | created `0600` (owner-only) so error data isn't world-readable on a shared host |
 
-33 tests pass on CI (Node 22): unit (`normalize` on every throw shape), integration (rotation, self-failure warn-once, boot check, `0600` perms), subprocess (the crash policy, each `kind`, `captureSync` surviving an immediate exit, and `exitOnRejection` end to end), and a **packed-tarball E2E** that extracts the real artifact and imports it by bare specifier.
+34 tests pass on CI (Node 22): unit (`normalize` on every throw shape), integration (rotation, self-failure warn-once, boot check, `0600` perms), subprocess (the crash policy, each `kind`, `captureSync` surviving an immediate exit, `exitOnRejection`, and `bootCheck: false` surviving an unwritable sink end to end), and a **packed-tarball E2E** that extracts the real artifact and imports it by bare specifier.
 
 ## Docs
 

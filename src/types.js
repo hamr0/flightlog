@@ -15,6 +15,11 @@
  *   synchronously, then `process.exit(1)`. Default `false` keeps a rejection
  *   log-only (and suppresses Node's default crash) — set `true` for short-lived
  *   processes that must die non-zero on a stray rejection.
+ * @property {boolean} [bootCheck=true]  Whether an unwritable `file` at install is
+ *   fatal. `true` (default) → `install()` throws, failing loud at startup. `false`
+ *   → warn once to stderr and continue (the sink degrades to swallow-on-write) —
+ *   for short-lived/per-invocation processes (cron, mail pipes) where a fatal boot
+ *   would take down the real work, not just the error sink.
  * @property {number} [maxBytes=5000000]  Rotate when a write would cross this size;
  *   `0` disables rotation.
  */

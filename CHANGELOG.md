@@ -7,7 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-05-31
+
+Additive, backward-compatible — second-round `gitdone` feedback (per-message
+Postfix pipe) plus a repo-only uploader example. See PRD §14.1.
+
 ### Added
+- **`bootCheck`** install option (default `true`). When `false`, an unwritable
+  `file` at install is **not fatal**: `install()` warns once to stderr and the sink
+  degrades to its normal swallow-on-write behavior instead of throwing. For
+  short-lived/per-invocation processes (cron, mail pipes) where a fatal boot would
+  take down the real work, not just the error sink — e.g. a Postfix pipe whose
+  non-zero exit would defer all mail. Default `true` preserves the fail-loud-at-boot
+  behavior. Mirrors `exitOnUncaught` / `exitOnRejection`.
 - Repo-only `examples/ship.js`: a complete, zero-dep, consent-gated reference
   uploader for shipping the JSONL to a server you control — the transport layer
   flightlog deliberately does not provide. Not shipped in the package, not a
@@ -79,7 +91,8 @@ First functional release — the global error net, packaged once (see the PRD in
   package throws on import directing users to the repo. Reserves `flightlog`
   while `0.1.0` is built.
 
-[Unreleased]: https://github.com/hamr0/flightlog/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/hamr0/flightlog/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/hamr0/flightlog/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/hamr0/flightlog/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/hamr0/flightlog/compare/v0.0.1...v0.1.0
 [0.0.1]: https://github.com/hamr0/flightlog/releases/tag/v0.0.1
