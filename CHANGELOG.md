@@ -25,6 +25,10 @@ First functional release — the global error net, packaged once (see the PRD in
 - Self-failure handling: swallow (never crash the app) + warn-once-to-stderr.
 - JSDoc → generated `.d.ts`; `flightlog.context.md` adopter contract.
 
+### Security
+- The log file is created with mode `0600` (owner read/write only) so error data
+  isn't group/world-readable by default on a shared host.
+
 ## [0.0.1] - 2026-05-31
 
 ### Added

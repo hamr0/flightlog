@@ -120,8 +120,11 @@ pass to `install({ context })` / `capture(err, extra)`, plus error messages and
 stacks that can incidentally include sensitive strings. Therefore:
 
 - You own what goes into context. Don't pass secrets you wouldn't want on disk.
-- The log file inherits the sensitivity of its contents: restrict its permissions
-  and keep it off shared or world-readable paths.
+- The log file inherits the sensitivity of its contents. flightlog creates it
+  **`0600` (owner read/write only)** by default so it isn't group/world-readable on
+  a shared host. The mode applies only at creation — an existing file keeps its
+  perms, and you can `chmod` if you need it more permissive. Still keep it off
+  shared/world-readable *paths*; flightlog can't set perms it doesn't create.
 
 "Local + private" means *it never phones home* — not *it's safe to put secrets in*.
 

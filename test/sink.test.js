@@ -129,6 +129,20 @@ test('self-failure: warn flag resets on success, so a later failure warns again'
   assert.equal(warnings.length, 2);
 });
 
+test('security: the log file is created owner-only (0600), not world-readable',
+  { skip: process.platform === 'win32' ? 'POSIX modes only' : false }, async (t) => {
+    const file = join(tmp(t), 'errors.jsonl');
+    const s = sink({ file });
+    await s.write({ kind: 'manual', msg: 'sensitive' });
+    assert.equal(statSync(file).mode & 0o777, 0o600, 'no group/world read on a shared host');
+
+    // Survives rotation: the freshly recreated current segment is also 0600.
+    const rotated = join(tmp(t), 'rot.jsonl');
+    const r = sink({ file: rotated, maxBytes: 60 });
+    for (let i = 0; i < 6; i++) await r.write({ i, pad: 'wwwwwwww' });
+    assert.equal(statSync(rotated).mode & 0o777, 0o600);
+  });
+
 test('no file: falls back to stderr, one line per record', async (t) => {
   const s = sink({}); // no file
   const lines = await captureStderr(async () => {

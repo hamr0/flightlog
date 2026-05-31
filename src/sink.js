@@ -9,6 +9,15 @@ import { dirname } from 'node:path';
 export const DEFAULT_MAX_BYTES = 5_000_000;
 
 /**
+ * Mode the log file is created with. Owner read/write only: the log holds error
+ * messages/stacks/context that may incidentally carry sensitive strings, so it
+ * must not be group/world-readable by default on a shared host. `mode` only
+ * applies when the file is created, so this never alters an existing file's perms
+ * (an adopter who wants it more permissive can chmod).
+ */
+const FILE_MODE = 0o600;
+
+/**
  * @typedef {Object} SinkOptions
  * @property {string} [file]  JSONL path. Omit → write to stderr (no rotation).
  * @property {number} [maxBytes=5000000]  Rotate when a write would cross this;
@@ -27,7 +36,7 @@ export function sink({ file, maxBytes = DEFAULT_MAX_BYTES } = {}) {
   // Boot-time writability check — fail loud now. mkdir the parent, then probe an
   // append (creates the file if missing; throws EACCES/EROFS/ENOTDIR/… on a bad path).
   mkdirSync(dirname(file), { recursive: true });
-  appendFileSync(file, '');
+  appendFileSync(file, '', { mode: FILE_MODE });
 
   let warned = false;
 
@@ -58,7 +67,7 @@ export function sink({ file, maxBytes = DEFAULT_MAX_BYTES } = {}) {
       try {
         const line = JSON.stringify(record) + '\n';
         rotateIfNeeded(Buffer.byteLength(line));
-        await appendFile(file, line);
+        await appendFile(file, line, { mode: FILE_MODE });
         warned = false; // reset-on-success
       } catch (err) {
         warnOnce(err);
@@ -68,7 +77,7 @@ export function sink({ file, maxBytes = DEFAULT_MAX_BYTES } = {}) {
       try {
         const line = JSON.stringify(record) + '\n';
         rotateIfNeeded(Buffer.byteLength(line));
-        appendFileSync(file, line);
+        appendFileSync(file, line, { mode: FILE_MODE });
         warned = false; // reset-on-success
       } catch (err) {
         warnOnce(err);
