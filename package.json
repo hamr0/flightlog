@@ -1,0 +1,43 @@
+{
+  "name": "flightlog",
+  "version": "0.0.1",
+  "description": "A flight recorder for your app — zero-dependency local error capture to JSONL. Early WIP.",
+  "type": "module",
+  "main": "./src/index.js",
+  "exports": {
+    ".": {
+      "types": "./types/index.d.ts",
+      "default": "./src/index.js"
+    }
+  },
+  "files": [
+    "src/",
+    "types/",
+    "README.md",
+    "flightlog.context.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "error",
+    "errors",
+    "logging",
+    "jsonl",
+    "uncaughtexception",
+    "unhandledrejection",
+    "zero-dependency",
+    "error-handler",
+    "error-tracking"
+  ],
+  "author": "Amr <avoidaccess@msn.com>",
+  "license": "Apache-2.0",
+  "homepage": "https://github.com/hamr0/flightlog#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hamr0/flightlog.git"
+  },
+  "bugs": {
+    "url": "https://github.com/hamr0/flightlog/issues"
+  }
+}
