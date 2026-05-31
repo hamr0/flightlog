@@ -1,35 +1,108 @@
-# flightlog
+```
+   uncaught   ─┐
+   rejected   ─┤   ╭───────────────╮      errors.jsonl
+   capture()  ─┴─▶ │ ▓ flight log ▓ │ ─▶  {"ts":…,"kind":"uncaught",…}
+                   ╰───────────────╯       {"ts":…,"kind":"manual",…}
+                  survives the crash       {"ts":…,"kind":"unhandledRejection",…}
+                  · readable anytime
 
-> A flight recorder for your app — zero-dependency local error capture to JSONL.
-
-**Status: `0.1.0` — first functional release.** Zero production dependencies.
-The full adopter contract is in [`flightlog.context.md`](./flightlog.context.md).
-
-## What it is
-
-A small, zero-dependency Node library that catches the errors your app would
-otherwise lose — uncaught exceptions, unhandled promise rejections, and errors you
-hand it — and appends each as one JSON line to a local JSONL file you can read at
-any time, even on a healthy app, to see *where things have failed*.
-
-```js
-import { install } from 'flightlog';
-
-const { capture } = install({
-  file: '/var/log/myapp/errors.jsonl',       // sink; omit → stderr
-  context: { app: 'myapp', release: 'v1.0' }, // static, you choose — never auto-harvested
-});
-
-try { risky(); } catch (err) { capture(err, { where: 'checkout' }); }
+   flightlog
 ```
 
-## What it is *not*
+> A flight recorder for your app. Catches what would otherwise vanish — uncaught exceptions, unhandled rejections, and errors you hand it — and writes each as **one JSON line** to a local file you can read anytime, even on a healthy app.
+> ~130 lines of code, **zero** production dependencies. The JSONL *is* the interface.
 
-No aggregation, no dedup, no breadcrumbs, no UI, no server, no phone-home, no
-auto-captured context. The JSONL is the interface — read it with `tail`/`jq`/your
-editor. It's the local, private alternative to a hosted error-monitoring SaaS for
-solo, pre-scale, zero-telemetry apps.
+<p align="center">
+  <a href="https://github.com/hamr0/flightlog/actions/workflows/ci.yml"><img src="https://github.com/hamr0/flightlog/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <img src="https://img.shields.io/github/package-json/v/hamr0/flightlog?label=version&color=2a4f8c" alt="version (auto from package.json)">
+  <img src="https://img.shields.io/badge/license-Apache%202.0-2a4f8c" alt="license: Apache 2.0">
+</p>
+
+---
+
+## What this is
+
+flightlog is the ~20-line global error net — packaged once, audited, so it wires into every app the same way. `install()` once: it registers the handlers, runs a boot-time writability check, and hands you a `capture()`. Every uncaught exception, unhandled rejection, and value you pass to `capture()` becomes one normalized JSONL line.
+
+Same build ethos as the [bare suite](#where-this-sits) — embed it, don't run it; zero deps; no daemon, no SaaS, no telemetry — but flightlog is **substrate for your own apps**, not agent infrastructure. Closest sibling: [mailproof](https://github.com/hamr0/mailproof).
+
+It owns exactly one layer: *catch → normalize → append*. It is **not** a general logger (no info/warn levels — that's pino/winston), **not** aggregation or dedup (that's `jq` when you need it), **not** breadcrumbs or auto-captured context (the surveillance payload a privacy tool refuses), and ships **no UI, server, or reader** — the JSONL is the whole read surface. It never harvests context: it logs only what you hand it.
+
+## Install
+
+```
+npm install flightlog
+```
+
+Requires Node.js >= 18. **Zero production dependencies** (vanilla + `node:fs`). Ships TypeScript types generated from JSDoc — `import { install } from "flightlog"` gives you autocomplete out of the box, no `@types` package needed.
+
+## Quick start
+
+```js
+import { install } from "flightlog";
+
+const { capture } = install({
+  file: "/var/log/myapp/errors.jsonl",         // sink; omit → stderr
+  context: { app: "myapp", release: "v1.4.2" }, // static, you choose — never auto-harvested
+  exitOnUncaught: true,                         // default; false = log-and-stay-alive (CLI/desktop)
+  maxBytes: 5_000_000,                          // default 5 MB; 0 disables rotation
+});
+
+// Operational errors you catch at a boundary — the request fails, the server stays up:
+try { await risky(); } catch (err) { capture(err, { where: "checkout", userId }); }
+```
+
+That's the whole wiring. Uncaught exceptions log synchronously then `exit(1)` (your supervisor restarts clean); unhandled rejections log and stay alive; `capture()` is fire-and-forget and never throws.
+
+**Wiring it into a real app?** Hand your AI assistant the integration guide and describe what you want:
+
+```
+Read flightlog.context.md from node_modules/flightlog/flightlog.context.md,
+then wire flightlog into my app. Here's my setup: <describe app, log path, context>.
+```
+
+That file has every option, the full record shape, the crash policy, the rejection gotcha, the threat model, and the `jq` / `tail` reading recipes.
+
+## The record
+
+One flat JSON object per error — `kind` is how it was caught, everything after `stack` is context you supplied:
+
+```json
+{"ts":"2026-05-31T12:00:00.000Z","kind":"uncaught","name":"TypeError","message":"x is not a function","stack":"…","app":"myapp","release":"v1.4.2"}
+```
+
+| What | Behavior |
+|---|---|
+| **uncaught exception** | log synchronously → `exit(1)` (unless `exitOnUncaught: false`) so a supervisor restarts a clean process |
+| **unhandled rejection** | log only — *intentionally suppresses Node's default crash-on-rejection*; a stray rejection shouldn't down a server |
+| **manual `capture(err, extra?)`** | normalize + append `{ ...context, ...extra }`; never throws, never exits |
+| **non-Error throws** (`throw "x"`, objects, `null`) | described faithfully, given a stack synthesized at the *call site* — not flightlog's internals |
+| **disk growth** | size cap + rotation: at `maxBytes` the file rolls to `.1` (current + one previous, bounded ~2×). `0` disables |
+| **broken sink** (perms / read-only / full disk) | swallowed — never crashes your app — and surfaced once to stderr with the errno, reset on recovery |
+| **file perms** | created `0600` (owner-only) so error data isn't world-readable on a shared host |
+
+30 tests pass on CI (Node 22): unit (`normalize` on every throw shape), integration (rotation, self-failure warn-once, boot check, `0600` perms), subprocess (the crash policy and each `kind` end to end), and a **packed-tarball E2E** that extracts the real artifact and imports it by bare specifier.
+
+## Docs
+
+| | |
+|---|---|
+| **[Integration Guide](flightlog.context.md)** | The complete adopter contract — options, API, record shape, gotchas, threat model. Hand it to your AI assistant. |
+| **[PRD](docs/01-product/2026-05-31-prd.md)** | Locked decisions + *why*, success criteria, the refusals, build order. *(repo-only)* |
+| **[CHANGELOG](CHANGELOG.md)** | keep-a-changelog; an entry every release. |
+
+## Where this sits
+
+flightlog is **substrate** — it serves the apps you run, not AI agents. That's a different layer from the **bare suite**, which is zero-dep *agent* infrastructure. Same vanilla-ESM ethos, deliberately different audience:
+
+| | the bare suite | **flightlog** |
+|---|---|---|
+| **Serves** | AI agents | your own apps (addypin, gitdone, latefyi, …) |
+| **Examples** | [bareagent](https://github.com/hamr0/bareagent) · [barebrowse](https://github.com/hamr0/barebrowse) · [baremobile](https://github.com/hamr0/baremobile) · [bareguard](https://github.com/hamr0/bareguard) | flightlog · [mailproof](https://github.com/hamr0/mailproof) |
+| **Shape** | embed, don't run · zero deps · no telemetry | embed, don't run · zero deps · no telemetry |
+
+flightlog deliberately carries **no bare-suite badge** — it's a sibling in spirit, not a member.
 
 ## License
 
-Apache-2.0 © 2026 Amr
+Apache 2.0. See [LICENSE](LICENSE).
