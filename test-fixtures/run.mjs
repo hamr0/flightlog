@@ -28,11 +28,13 @@ if (scenario === 'install-badpath') {
 }
 
 const exitOnUncaught = exitFlag !== 'false';
+const exitOnRejection = scenario === 'rejection-fatal';
 const withContext = scenario !== 'manual-bare';
-const { capture } = install({
+const { capture, captureSync } = install({
   file,
   context: withContext ? { app: 'fix', release: 'v1' } : undefined,
   exitOnUncaught,
+  exitOnRejection,
   maxBytes: 0, // rotation is M2's concern; keep it out of these tests
 });
 
@@ -60,10 +62,22 @@ switch (scenario) {
     await waitFor(() => lineCount() >= 1);
     process.exit(0);
     break;
+  case 'manual-sync':
+    // The adopter's Problem 1: capture-then-exit. captureSync must land the line
+    // BEFORE an immediate exit — no event-loop turn, no await, no waitFor.
+    captureSync(new Error('sync boom'), { where: 'exit' });
+    process.exit(7); // adopter-chosen code: proves the exit policy stays the caller's
+    break;
   case 'rejection':
     Promise.reject(new Error('rejected boom'));
     await waitFor(() => lineCount() >= 1); // reaching here at all proves no crash
     process.exit(0);
+    break;
+  case 'rejection-fatal':
+    // exitOnRejection:true → handler writeSyncs then exit(1). Keep the loop alive
+    // so the rejection is delivered; the handler exits well before this fires.
+    Promise.reject(new Error('rejected fatal'));
+    setTimeout(() => process.exit(3), 2000); // safety net: distinct code if handler never ran
     break;
   case 'uncaught': // exitOnUncaught default true → handler logs (sync) then exit(1)
     setTimeout(() => { throw new Error('uncaught boom'); }, 10);

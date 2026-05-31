@@ -11,6 +11,10 @@
  *   record. Adopter-chosen — flightlog never auto-harvests anything.
  * @property {boolean} [exitOnUncaught=true]  On an uncaught exception: log
  *   synchronously, then `process.exit(1)`. `false` → log and stay alive.
+ * @property {boolean} [exitOnRejection=false]  On an unhandled rejection: log
+ *   synchronously, then `process.exit(1)`. Default `false` keeps a rejection
+ *   log-only (and suppresses Node's default crash) — set `true` for short-lived
+ *   processes that must die non-zero on a stray rejection.
  * @property {number} [maxBytes=5000000]  Rotate when a write would cross this size;
  *   `0` disables rotation.
  */

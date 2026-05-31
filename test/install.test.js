@@ -49,6 +49,19 @@ test('manual capture with no context: default-out (only core fields)', (t) => {
   assert.deepEqual(Object.keys(recs[0]), ['ts', 'kind', 'name', 'message', 'stack']);
 });
 
+test('captureSync: writes synchronously and survives an immediate process.exit', (t) => {
+  // The adopter's Problem 1 — capture-then-exit. No await, no event-loop turn:
+  // the line must already be on disk when the process dies.
+  const { status, recs } = run(t, 'manual-sync');
+  assert.equal(status, 7, 'exit code stays the caller\'s — captureSync does not exit');
+  assert.equal(recs.length, 1, 'the sync line landed despite the immediate exit');
+  const r = recs[0];
+  assert.equal(r.kind, 'manual');
+  assert.equal(r.message, 'sync boom');
+  assert.equal(r.app, 'fix');     // static context still merged
+  assert.equal(r.where, 'exit');  // per-call extra still merged
+});
+
 test('uncaught (default): logs synchronously then exits 1', (t) => {
   const { status, recs } = run(t, 'uncaught');
   assert.equal(status, 1, 'exitOnUncaught default → exit(1) for the supervisor');
@@ -79,6 +92,16 @@ test('unhandledRejection: logs only and does NOT crash (exit 0)', (t) => {
   assert.equal(recs.length, 1);
   assert.equal(recs[0].kind, 'unhandledRejection');
   assert.equal(recs[0].message, 'rejected boom');
+});
+
+test('unhandledRejection with exitOnRejection:true: writes synchronously then exits 1', (t) => {
+  // The adopter's Problem 2 — a rejection-class failure in a short-lived process
+  // must be able to die non-zero, with the line guaranteed (sync) on the way out.
+  const { status, recs } = run(t, 'rejection-fatal');
+  assert.equal(status, 1, 'exitOnRejection makes a stray rejection fatal (exit 1)');
+  assert.equal(recs.length, 1);
+  assert.equal(recs[0].kind, 'unhandledRejection');
+  assert.equal(recs[0].message, 'rejected fatal');
 });
 
 test('idempotent: a second install() does not stack handlers or double-log', (t) => {

@@ -17,10 +17,11 @@ file before adopting, read this one.
 ```js
 import { install } from 'flightlog';
 
-const { capture } = install({
+const { capture, captureSync } = install({
   file: '/var/log/myapp/errors.jsonl',         // sink; omit → stderr
   context: { app: 'myapp', release: 'v1.4.2' }, // static, you choose
   exitOnUncaught: true,                         // default
+  exitOnRejection: false,                       // default; true = fatal rejections (see Options)
   maxBytes: 5_000_000,                          // default 5 MB; 0 disables rotation
 });
 
@@ -30,9 +31,31 @@ try { risky(); } catch (err) { capture(err, { where: 'checkout', userId }); }
 Three lines wire a whole app: import, `install`, and a `capture` at any boundary
 you want to survive without crashing.
 
-Requires **Node.js ≥ 18**. Ships TypeScript types generated from JSDoc, so
-`import { install } from 'flightlog'` gives you autocomplete and type-checking out
-of the box — no `@types/flightlog` package needed.
+**Short-lived process (CLI, cron, pipe transport)?** Use `captureSync` and own the
+exit code — the async `capture()` line is lost when you exit before it flushes:
+
+```js
+try { main(); } catch (err) { captureSync(err, { where: 'receive' }); process.exit(1); }
+```
+
+Ships TypeScript types generated from JSDoc, so `import { install } from 'flightlog'`
+gives you autocomplete and type-checking out of the box — no `@types/flightlog`
+package needed.
+
+### Module format — ESM-only
+
+flightlog is **ESM-only** (`import`, not `require`). The runtime floor depends on
+how you load it:
+
+- **ESM consumers (`import`)** — Node **≥ 18**. This is the supported path.
+- **CommonJS consumers (`require`)** — `require('flightlog')` works only on Node
+  **≥ 22.12**, where `require(esm)` is stable. On Node 18 / 20 / 22.0–22.11 it
+  throws `ERR_REQUIRE_ESM`; use `const { install } = await import('flightlog')`
+  instead.
+
+`engines` is `>=18` because that is the floor for the supported (ESM) path; it does
+not promise `require()` on every ≥18 release. flightlog will **not** ship a CommonJS
+dual-build — the small bit of loader work is the adopter's.
 
 **Call `install()` as early as possible** — ideally the first thing your entry
 file does, before other imports or setup can run. The global handlers only catch
@@ -46,6 +69,7 @@ escape the net during startup.
 | `file` | `string` | — | Path to the JSONL sink. **Omit → writes to stderr** (no rotation, no boot check). The parent directory is created (`mkdir -p`) at install. |
 | `context` | `object` | `{}` | Static fields merged into **every** record. You choose these — flightlog never auto-harvests anything (see Refusals). |
 | `exitOnUncaught` | `boolean` | `true` | On an uncaught exception: log synchronously, then `process.exit(1)` so a supervisor restarts you clean. Set `false` for CLIs/desktop apps that should log-and-stay-alive. |
+| `exitOnRejection` | `boolean` | `false` | On an unhandled rejection: log **synchronously**, then `process.exit(1)`. Default `false` keeps rejections log-only (and suppresses Node's default crash). Set `true` for **short-lived processes** (cron, pipe transports) that must die non-zero on a stray rejection instead of silently exiting `0`. See the rejection gotcha below. |
 | `maxBytes` | `number` | `5_000_000` | Rotate the file when a write would cross this size. `0` disables rotation. |
 
 ## API
@@ -55,7 +79,14 @@ escape the net during startup.
   and returns `capture`.
 - **`capture(err, extra?) → void`** — normalize any thrown value and append one
   line, merging `{ ...context, ...extra }` (per-call `extra` wins on key clashes).
-  Never throws.
+  **Async / fire-and-forget** — returns before the line is durably on disk. Never
+  throws.
+- **`captureSync(err, extra?) → void`** — the **synchronous** sibling: writes the
+  line before it returns. Same record and merge as `capture`, same `manual` kind.
+  Use it when you `capture`-then-`exit` in a short-lived process — `capture()`'s
+  line would be lost when `process.exit()` kills the event loop before the async
+  append flushes. The exit-code decision stays yours; `captureSync` never exits and
+  never throws.
 
 ## Record shape
 
@@ -80,8 +111,9 @@ escape the net during startup.
   clean process. flightlog has **no restart logic of its own** — backoff on a
   crash-loop is the supervisor's job.
 - **Write mode.** Normal path is async (`appendFile`) so a single error never
-  freezes the server. The uncaught→exit path writes **synchronously** so the
-  final line is flushed before the process dies.
+  freezes the server. The exit paths — uncaught, a rejection under
+  `exitOnRejection`, and `captureSync` — write **synchronously** so the final line
+  is flushed before the process dies.
 - **Rotation.** At `maxBytes` the current file is renamed to `<file>.1` (the old
   `.1` is discarded) and a fresh file starts. You keep the current file plus one
   previous segment — disk is bounded at **~2× `maxBytes`**, forever, with zero
@@ -98,17 +130,24 @@ escape the net during startup.
 
 ## Gotchas
 
-- **Unhandled rejections are logged but do NOT exit — and this suppresses Node's
-  own default crash-on-rejection.** That is intentional: a stray un-awaited
-  rejection shouldn't take a whole server down. If you *want* a rejection to crash
-  the process, convert it to an uncaught exception yourself (e.g. rethrow in a
-  top-level handler). Only `uncaught` exits (and only when `exitOnUncaught` is on).
+- **Unhandled rejections are logged but, by default, do NOT exit — and this
+  suppresses Node's own default crash-on-rejection, so the process exits `0`.**
+  That default is right for a long-lived server: a stray un-awaited rejection
+  shouldn't take it down. But it is a **sharp edge for short-lived processes** — a
+  cron job or a mail pipe whose top-level is `main().catch(...)` will exit `0` on a
+  rejection-class failure, which a caller (e.g. Postfix) reads as *success* and
+  silently drops the failed work. For those, set **`exitOnRejection: true`** — the
+  rejection is then logged synchronously and the process exits `1`. (Converting the
+  rejection to an uncaught exception yourself also works, but `exitOnRejection` is
+  the in-library knob.) `exitOnUncaught` governs only the uncaught path.
 - **A single line larger than `maxBytes`** is still written whole (JSONL lines are
   never split); rotation happens before it, so that one oversized line briefly
   lives in an otherwise-fresh file.
 - **`capture()` is fire-and-forget on the async path.** It returns before the line
-  is durably on disk. The death path (uncaught) is synchronous precisely so the
-  last line survives the exit.
+  is durably on disk, so a `capture(err); process.exit(1)` loses the line — the
+  exit kills the event loop before the append flushes. Use **`captureSync`** when
+  you log-then-exit. The death path (uncaught, and rejection under
+  `exitOnRejection`) is synchronous precisely so the last line survives the exit.
 - **`install()` is idempotent.** Call it more than once (hot-reload, tests, two
   entry points) and the latest call wins: it swaps in the new options and rebinds
   `capture` without stacking a second handler pair — so errors are never logged

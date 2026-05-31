@@ -40,9 +40,12 @@ to them.
 - No breadcrumbs / auto-captured context — the surveillance payload we refuse.
 - No symbolication / alerting / release tracking — team/scale process.
 - No restart logic — that's the supervisor's (systemd/Docker/pm2) job.
-- **Unhandled rejections log only and do NOT exit** — note this *suppresses Node's
-  own default crash-on-rejection*. Intended: a stray rejection shouldn't take a
-  server down. Document as a gotcha in `context.md`.
+- **Unhandled rejections log only and do NOT exit *by default*** — note this
+  *suppresses Node's own default crash-on-rejection*. Intended: a stray rejection
+  shouldn't take a server down. As of 0.2.0 there is an **opt-in `exitOnRejection`**
+  (default `false`, so the doctrine default is unchanged) for short-lived processes
+  that must die non-zero — see PRD §14 for why this opt-in did *not* violate the
+  refusal. Document as a gotcha in `context.md`.
 
 ## Build approach
 
