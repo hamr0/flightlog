@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Docs: `flightlog.context.md` now opens with a **What flightlog is and is not**
   section, putting the is/not boundary in the first screenful (per
   `LIBRARY_CONVENTIONS.md` §3) instead of only at the refusals section below.
+- Docs: `examples/README.md` documenting what `examples/ship.js` is and does
+  (GitHub renders it when browsing the folder), and a **Examples** row in the
+  README Docs table so the reference uploader is discoverable from the front
+  page, not just from `context.md`. Repo-only, as before.
 
 ## [0.3.1] - 2026-05-31
 

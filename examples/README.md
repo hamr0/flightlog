@@ -1,0 +1,34 @@
+# examples/
+
+Reference code that is **not part of the package** — repo-only, never in the npm
+tarball (`examples/` is excluded from `package.json` `files`), never a dependency.
+Copy what you need into your app and adapt it.
+
+## `ship.js` — a consent-gated uploader
+
+The layer flightlog deliberately does **not** provide. flightlog records errors
+locally and never phones home; if you want logs sent back to you (e.g. a customer
+"send diagnostics" opt-in), you build that **on top of the JSONL** — and `ship.js`
+is a complete, working starting point.
+
+- **`createShipper({ file, endpoint, consent, … }) → { shipOnce, start, stop }`** —
+  reads only the bytes not yet sent (a persisted byte offset in `${file}.shipped`),
+  POSTs them as a JSON batch to an endpoint you control, and advances the offset.
+- **Consent is the only gate that matters.** `consent()` returns false → nothing is
+  read and nothing leaves the disk. Default it OFF.
+- **Never throws.** A shipper must never become the bug — the same rule as the
+  recorder.
+- **Zero deps.** Global `fetch` + `node:fs` only.
+
+Two usage shapes (see the wiring block at the bottom of the file):
+
+- **Background trickle** — `ship.start(5 * 60_000)` sends new lines every few
+  minutes, only while consent is on.
+- **Windows-error-report style** — on a crash prompt, the user clicks "Send" →
+  `await ship.shipOnce()`.
+
+> The moment logs land on your server you become the data controller — disclose it.
+> When the shipper earns its place (you ship it across more than one app), graduate
+> it into its own zero-dep package; never fold transport into flightlog. See the
+> threat model and refusals in
+> [`flightlog.context.md`](../flightlog.context.md).
