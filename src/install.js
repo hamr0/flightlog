@@ -4,15 +4,7 @@
 import { normalize } from './normalize.js';
 import { sink } from './sink.js';
 
-/**
- * @typedef {Object} InstallOptions
- * @property {string} [file]  JSONL sink path. Omit → stderr.
- * @property {Object} [context]  Static fields merged into every record (you choose;
- *   never auto-harvested).
- * @property {boolean} [exitOnUncaught=true]  On an uncaught exception: log (sync)
- *   then `process.exit(1)`. `false` → log and stay alive (CLIs/desktop).
- * @property {number} [maxBytes]  Rotate at this size (default 5 MB; `0` disables).
- */
+/** @typedef {import('./types.js').InstallOptions} InstallOptions */
 
 /**
  * Install the global error net. Registers `uncaughtException` and

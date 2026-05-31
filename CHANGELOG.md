@@ -7,7 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-Planned for `0.1.0` — first functional release (see `docs/01-product` PRD):
+## [0.1.0] - 2026-05-31
+
+First functional release — the global error net, packaged once (see the PRD in
+`docs/01-product`). Zero production dependencies.
 
 ### Added
 - `install(opts?) → { capture }` — registers global handlers for
@@ -29,5 +32,6 @@ Planned for `0.1.0` — first functional release (see `docs/01-product` PRD):
   package throws on import directing users to the repo. Reserves `flightlog`
   while `0.1.0` is built.
 
-[Unreleased]: https://github.com/hamr0/flightlog/compare/v0.0.1...HEAD
+[Unreleased]: https://github.com/hamr0/flightlog/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/hamr0/flightlog/compare/v0.0.1...v0.1.0
 [0.0.1]: https://github.com/hamr0/flightlog/releases/tag/v0.0.1

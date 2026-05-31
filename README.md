@@ -2,12 +2,12 @@
 
 > A flight recorder for your app — zero-dependency local error capture to JSONL.
 
-**Status: early WIP (`0.0.1` placeholder).** The API below is the planned `0.1.0`
-shape, not yet implemented. This release reserves the name; do not depend on it yet.
+**Status: `0.1.0` — first functional release.** Zero production dependencies.
+The full adopter contract is in [`flightlog.context.md`](./flightlog.context.md).
 
-## What it will be
+## What it is
 
-A ~50-line, zero-dependency Node library that catches the errors your app would
+A small, zero-dependency Node library that catches the errors your app would
 otherwise lose — uncaught exceptions, unhandled promise rejections, and errors you
 hand it — and appends each as one JSON line to a local JSONL file you can read at
 any time, even on a healthy app, to see *where things have failed*.

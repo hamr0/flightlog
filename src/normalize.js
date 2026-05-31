@@ -37,7 +37,7 @@ function synthesizeStack(name, message) {
   if (typeof Error.captureStackTrace === 'function') {
     Error.captureStackTrace(carrier, normalize);
   }
-  return carrier.stack;
+  return carrier.stack ?? `${name}: ${message}`;
 }
 
 /**

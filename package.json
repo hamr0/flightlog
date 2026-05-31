@@ -1,7 +1,7 @@
 {
   "name": "flightlog",
-  "version": "0.0.1",
-  "description": "A flight recorder for your app — zero-dependency local error capture to JSONL. Early WIP.",
+  "version": "0.1.0",
+  "description": "A flight recorder for your app — zero-dependency local error capture to JSONL.",
   "type": "module",
   "main": "./src/index.js",
   "exports": {
@@ -9,6 +9,12 @@
       "types": "./types/index.d.ts",
       "default": "./src/index.js"
     }
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build:types": "tsc",
+    "prepublishOnly": "npm run build:types",
+    "test": "node --test"
   },
   "files": [
     "src/",
@@ -40,5 +46,9 @@
   },
   "bugs": {
     "url": "https://github.com/hamr0/flightlog/issues"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.7.0"
   }
 }
