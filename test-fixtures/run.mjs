@@ -4,7 +4,7 @@
 //
 // Lives outside test/ on purpose: `node --test` auto-discovers everything under a
 // test/ dir, and this file is meant to be spawned with argv, not run standalone.
-import { install } from '../src/install.js';
+import { install } from '../src/index.js'; // exercise the PUBLIC entry, not the internal module
 import { readFileSync, existsSync } from 'node:fs';
 
 const [, , file, scenario, exitFlag] = process.argv;

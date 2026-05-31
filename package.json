@@ -4,6 +4,7 @@
   "description": "A flight recorder for your app — zero-dependency local error capture to JSONL.",
   "type": "module",
   "main": "./src/index.js",
+  "types": "./types/index.d.ts",
   "exports": {
     ".": {
       "types": "./types/index.d.ts",
