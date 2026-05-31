@@ -100,6 +100,10 @@ you want to survive without crashing.
 - **`capture()` is fire-and-forget on the async path.** It returns before the line
   is durably on disk. The death path (uncaught) is synchronous precisely so the
   last line survives the exit.
+- **`install()` is idempotent.** Call it more than once (hot-reload, tests, two
+  entry points) and the latest call wins: it swaps in the new options and rebinds
+  `capture` without stacking a second handler pair — so errors are never logged
+  twice and process listeners don't leak.
 
 ## What flightlog will not do (the refusals *are* the product)
 

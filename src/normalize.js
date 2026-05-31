@@ -2,6 +2,9 @@
 // The record is the line that lands in the JSONL sink (PRD §6). Context is spread
 // in but NEVER auto-harvested: flightlog logs only what the adopter passed.
 
+/** @typedef {import('./types.js').Kind} Kind */
+/** @typedef {import('./types.js').LogRecord} LogRecord */
+
 /**
  * Render a non-Error thrown value into a faithful message string. A debugging
  * tool must not drop what was thrown, so objects are JSON-serialized (with a
@@ -32,8 +35,9 @@ function describe(value) {
  * @returns {string}
  */
 function synthesizeStack(name, message) {
-  const carrier = new Error(message);
-  carrier.name = name;
+  // A plain carrier is enough: captureStackTrace formats the header from its
+  // name/message, so we avoid constructing a throwaway Error just for its stack.
+  const carrier = { name, message };
   if (typeof Error.captureStackTrace === 'function') {
     Error.captureStackTrace(carrier, normalize);
   }
@@ -46,12 +50,11 @@ function synthesizeStack(name, message) {
  * described and given a boundary-anchored synthetic stack.
  *
  * @param {unknown} value   The thrown value (Error or not).
- * @param {('uncaught'|'unhandledRejection'|'manual')} kind  How it was caught.
+ * @param {Kind} kind  How it was caught.
  * @param {Object} [context]  Adopter-supplied fields, spread in after the core
  *   fields. Already-merged by the caller (static + per-call extra); normalize
  *   never harvests anything on its own.
- * @returns {{ ts: string, kind: string, name: string, message: string, stack: string }
- *   & Object}
+ * @returns {LogRecord}
  */
 export function normalize(value, kind, context = {}) {
   const isError = value instanceof Error;

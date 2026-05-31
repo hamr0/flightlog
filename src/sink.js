@@ -6,7 +6,7 @@ import { appendFileSync, mkdirSync, statSync, renameSync, rmSync } from 'node:fs
 import { dirname } from 'node:path';
 
 /** Default size cap before rotation (~5 MB). `0` disables rotation entirely. */
-export const DEFAULT_MAX_BYTES = 5_000_000;
+const DEFAULT_MAX_BYTES = 5_000_000;
 
 /**
  * Mode the log file is created with. Owner read/write only: the log holds error

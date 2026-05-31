@@ -81,6 +81,17 @@ test('unhandledRejection: logs only and does NOT crash (exit 0)', (t) => {
   assert.equal(recs[0].message, 'rejected boom');
 });
 
+test('idempotent: a second install() does not stack handlers or double-log', (t) => {
+  const file = join(tmp(t), 'errors.jsonl');
+  const res = spawnSync(process.execPath, [FIXTURE, file, 'double-install'], { encoding: 'utf8' });
+  assert.equal(res.status, 0);
+  const counts = JSON.parse(res.stdout.trim().split('\n')[0]);
+  assert.equal(counts.uncaught, 1, 'exactly one uncaughtException handler after two installs');
+  assert.equal(counts.rejection, 1, 'exactly one unhandledRejection handler after two installs');
+  const recs = readFileSync(file, 'utf8').split('\n').filter(Boolean);
+  assert.equal(recs.length, 1, 'one rejection logged once, not twice');
+});
+
 test('bad path: install() throws loud at the boot check (non-zero exit)', (t) => {
   // a regular file used as a parent directory → parent dir can't be created (ENOTDIR).
   const dir = tmp(t);

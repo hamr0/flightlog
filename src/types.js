@@ -15,12 +15,14 @@
  *   `0` disables rotation.
  */
 
+/** How an error reached flightlog. @typedef {('uncaught'|'unhandledRejection'|'manual')} Kind */
+
 /**
  * One normalized error record — the shape of a single JSONL line. Core fields are
  * always present; any additional keys are adopter-supplied context.
  * @typedef {Object} LogRecord
  * @property {string} ts  ISO 8601 timestamp.
- * @property {('uncaught'|'unhandledRejection'|'manual')} kind  How it was caught.
+ * @property {Kind} kind  How it was caught.
  * @property {string} name  Error name (or `"Error"` for a non-Error throw).
  * @property {string} message  Error message (described faithfully for non-Errors).
  * @property {string} stack  Real stack, or one synthesized at the call boundary.

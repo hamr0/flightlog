@@ -36,6 +36,19 @@ const { capture } = install({
   maxBytes: 0, // rotation is M2's concern; keep it out of these tests
 });
 
+// Idempotency: a second install must not stack a second handler pair.
+if (scenario === 'double-install') {
+  install({ file, context: { app: 'fix', release: 'v1' }, maxBytes: 0 });
+  process.stdout.write(JSON.stringify({
+    uncaught: process.listenerCount('uncaughtException'),
+    rejection: process.listenerCount('unhandledRejection'),
+  }) + '\n');
+  Promise.reject(new Error('rejected boom'));
+  await waitFor(() => lineCount() >= 1);
+  await new Promise((r) => setTimeout(r, 60)); // let any (buggy) duplicate land
+  process.exit(0);
+}
+
 switch (scenario) {
   case 'manual':
     capture(new Error('manual boom'), { where: 'unit' });

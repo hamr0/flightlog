@@ -16,7 +16,8 @@ First functional release — the global error net, packaged once (see the PRD in
 - `install(opts?) → { capture }` — registers global handlers for
   `uncaughtException` (log, then `exit(1)` unless `exitOnUncaught: false`) and
   `unhandledRejection` (log only), runs a boot-time writability check, and
-  returns a manual `capture(err, extra?)`.
+  returns a manual `capture(err, extra?)`. Idempotent: a repeated call replaces
+  the handlers (last wins) rather than stacking a second pair.
 - JSONL sink: one normalized record per error
   (`ts`, `kind`, `name`, `message`, `stack`, + adopter-supplied context only).
 - Built-in size cap + rotation (`maxBytes`, default 5 MB / `5_000_000` bytes;
