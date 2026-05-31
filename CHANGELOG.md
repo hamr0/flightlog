@@ -16,7 +16,9 @@ Planned for `0.1.0` — first functional release (see `docs/01-product` PRD):
   returns a manual `capture(err, extra?)`.
 - JSONL sink: one normalized record per error
   (`ts`, `kind`, `name`, `message`, `stack`, + adopter-supplied context only).
-- Built-in size cap + rotation (`maxBytes`, default ~5 MB; `0` disables).
+- Built-in size cap + rotation (`maxBytes`, default 5 MB / `5_000_000` bytes;
+  `0` disables). At the cap the current file rolls to `.1` (keeping current + one
+  previous, so disk is bounded at ~2× `maxBytes`).
 - Self-failure handling: swallow (never crash the app) + warn-once-to-stderr.
 - JSDoc → generated `.d.ts`; `flightlog.context.md` adopter contract.
 
