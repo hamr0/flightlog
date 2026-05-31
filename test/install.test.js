@@ -1,0 +1,93 @@
+// M3 — integration tests for install(opts) → { capture }. Each scenario runs in a
+// child process (global handlers + process.exit can't be tested cleanly in-process)
+// and we assert on exit code + the JSONL file. Covers PRD §3.2 (all kinds), §7
+// (crash policy), and the confirmed rejection-log-only behavior.
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
+import { mkdtempSync, rmSync, readFileSync, existsSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const FIXTURE = join(dirname(fileURLToPath(import.meta.url)), '..', 'test-fixtures', 'run.mjs');
+
+function tmp(t) {
+  const dir = mkdtempSync(join(tmpdir(), 'flightlog-m3-'));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  return dir;
+}
+
+/** Run the fixture for a scenario; return { status, stderr, recs }. */
+function run(t, scenario, exitFlag) {
+  const file = join(tmp(t), 'errors.jsonl');
+  const args = [FIXTURE, file, scenario];
+  if (exitFlag !== undefined) args.push(exitFlag);
+  const res = spawnSync(process.execPath, args, { encoding: 'utf8' });
+  const recs = existsSync(file)
+    ? readFileSync(file, 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l))
+    : [];
+  return { status: res.status, stderr: res.stderr, recs };
+}
+
+test('manual capture: one line, kind=manual, context + extra merged', (t) => {
+  const { status, recs } = run(t, 'manual');
+  assert.equal(status, 0, 'capture() does not exit the process');
+  assert.equal(recs.length, 1);
+  const r = recs[0];
+  assert.equal(r.kind, 'manual');
+  assert.equal(r.name, 'Error');
+  assert.equal(r.message, 'manual boom');
+  assert.equal(r.app, 'fix');       // static context
+  assert.equal(r.release, 'v1');    // static context
+  assert.equal(r.where, 'unit');    // per-call extra
+});
+
+test('manual capture with no context: default-out (only core fields)', (t) => {
+  const { status, recs } = run(t, 'manual-bare');
+  assert.equal(status, 0);
+  assert.deepEqual(Object.keys(recs[0]), ['ts', 'kind', 'name', 'message', 'stack']);
+});
+
+test('uncaught (default): logs synchronously then exits 1', (t) => {
+  const { status, recs } = run(t, 'uncaught');
+  assert.equal(status, 1, 'exitOnUncaught default → exit(1) for the supervisor');
+  assert.equal(recs.length, 1);
+  assert.equal(recs[0].kind, 'uncaught');
+  assert.equal(recs[0].message, 'uncaught boom');
+});
+
+test('uncaught with exitOnUncaught:false: logs and stays alive (exit 0)', (t) => {
+  const { status, recs } = run(t, 'uncaught', 'false');
+  assert.equal(status, 0, 'log-and-stay-alive for CLIs/desktop');
+  assert.equal(recs.length, 1);
+  assert.equal(recs[0].kind, 'uncaught');
+});
+
+test('uncaught non-Error throw: normalized line, stack synthesized', (t) => {
+  const { status, recs } = run(t, 'uncaught-nonerror');
+  assert.equal(status, 1);
+  assert.equal(recs[0].kind, 'uncaught');
+  assert.equal(recs[0].name, 'Error');
+  assert.equal(recs[0].message, 'string boom');
+  assert.ok(recs[0].stack, 'synthesized stack present for a non-Error throw');
+});
+
+test('unhandledRejection: logs only and does NOT crash (exit 0)', (t) => {
+  const { status, recs } = run(t, 'rejection');
+  assert.equal(status, 0, 'rejections are log-only — Node default crash is suppressed');
+  assert.equal(recs.length, 1);
+  assert.equal(recs[0].kind, 'unhandledRejection');
+  assert.equal(recs[0].message, 'rejected boom');
+});
+
+test('bad path: install() throws loud at the boot check (non-zero exit)', (t) => {
+  // a regular file used as a parent directory → parent dir can't be created (ENOTDIR).
+  const dir = tmp(t);
+  const blocker = join(dir, 'blocker');
+  writeFileSync(blocker, 'x');
+  const badFile = join(blocker, 'sub', 'errors.jsonl');
+  const res = spawnSync(process.execPath, [FIXTURE, badFile, 'install-badpath'], { encoding: 'utf8' });
+  assert.notEqual(res.status, 0, 'a misconfigured path fails at install, not silently');
+  assert.match(res.stderr, /ENOTDIR|EEXIST|ENOENT/);
+});
