@@ -167,3 +167,18 @@ test('read.js: the printed jq hint is shell-safe to paste (no command injection)
     assert.equal(run.status, 0, 'the pasted hint runs cleanly');
     assert.equal(existsSync(marker), false, 'no injection — the hostile value stayed a jq string literal');
   });
+
+test('read.js: the printed jq hint includes every filter (not just --where)', (t) => {
+  const file = seed(tmp(t));
+  const printed = spawnSync(
+    process.execPath,
+    [READ_JS, file, '--kind', 'manual', '--match', 'proc=cron', '--since', '2026-06-01', '--tail', '5'],
+    { encoding: 'utf8' },
+  );
+  const hint = printed.stderr.split('\n').find((l) => l.includes('jq -c'));
+  // Every filter must appear, or a pasted hint silently returns the wrong rows.
+  assert.match(hint, /\.kind=="manual"/);
+  assert.match(hint, /\.\["proc"\]=="cron"/, '--match proc=cron must be in the hint, not dropped');
+  assert.match(hint, /\.ts>="2026-06-01"/);
+  assert.match(hint, /\| tail -n 5/);
+});

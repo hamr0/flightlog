@@ -72,7 +72,7 @@ export async function read(file, opts = {}) {
   return out;
 }
 
-/** One-line human summary of a record — the shape `jq -r` recipes reach for. */
+/** One compact human line per record — like a `jq -r` summary, but control-safe. */
 export function summarize(rec) {
   // Neutralize terminal control sequences before printing: a logged error message
   // can carry attacker-influenced strings, and a raw ESC / CR reaching the terminal
@@ -125,7 +125,9 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
       const shq = (s) => `'${String(s).replace(/'/g, `'\\''`)}'`;
       const sel = [
         opts.kind && `.kind==${JSON.stringify(opts.kind)}`,
-        opts.match?.where && `.where==${JSON.stringify(opts.match.where)}`,
+        // Every --match / --where field (not just `where`), via portable `.["k"]`
+        // access — otherwise the hint silently drops filters and returns all rows.
+        ...Object.entries(opts.match ?? {}).map(([k, v]) => `.[${JSON.stringify(k)}]==${JSON.stringify(v)}`),
         opts.since && `.ts>=${JSON.stringify(opts.since)}`,
       ].filter(Boolean).join(' and ');
       console.error(`  jq -c ${shq(sel ? `select(${sel})` : '.')} ${shq(file)}` +

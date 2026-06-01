@@ -33,14 +33,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   remain safe — JSON-escaped, so they can't forge a second log line; only your own
   keys can shadow core fields.) (Audit L2.)
 
+### Fixed
+- `examples/read.js`: the printed `jq`-equivalent hint **silently dropped every
+  `--match`/`--where` filter except `where`** (e.g. `--match proc=cron` printed
+  `jq -c '.'`, which returns *all* rows when pasted). It now emits every filter via
+  portable `.["key"]` access. Found in code review; locked by a test.
+
 ### Tests
-- `test/examples.test.js` (10 tests) — the repo-only reference scripts now have
+- `test/examples.test.js` (11 tests) — the repo-only reference scripts now have
   coverage, locking the security guards against regression: ship.js's
   HTTPS-fail-closed (incl. guard-before-consent and offset-only-advances-on-ack),
   read.js's paste-safe jq hint (executed through a fake `jq` to prove no command
   injection), and read.js's control-char neutralization (every C0/DEL/C1 escaped,
-  UTF-8 preserved — audit L5), plus read.js's filter/torn-line behavior. Suite:
-  38 → 48.
+  UTF-8 preserved — audit L5), plus read.js's filter/torn-line behavior and
+  jq-hint completeness. Suite: 38 → 49.
 
 ## [0.4.0] - 2026-06-01
 
