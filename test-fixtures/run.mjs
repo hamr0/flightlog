@@ -36,6 +36,15 @@ if (scenario === 'install-badpath-nonfatal') {
   process.exit(0);
 }
 
+// captureSync's WriteResult must report a DROPPED write on a degraded sink: a
+// per-invocation process can then choose to exit non-zero instead of exiting blind.
+if (scenario === 'manual-sync-status-broken') {
+  const { captureSync } = install({ file, bootCheck: false });
+  const res = captureSync(new Error('dropped'));
+  process.stdout.write(JSON.stringify(res) + '\n'); // expect {"ok":false,"errno":...}
+  process.exit(0);
+}
+
 const exitOnUncaught = exitFlag !== 'false';
 const exitOnRejection = scenario === 'rejection-fatal';
 const withContext = scenario !== 'manual-bare';
@@ -77,6 +86,13 @@ switch (scenario) {
     captureSync(new Error('sync boom'), { where: 'exit' });
     process.exit(7); // adopter-chosen code: proves the exit policy stays the caller's
     break;
+  case 'manual-sync-status': {
+    // captureSync returns its WriteResult; on a healthy sink that's { ok:true }.
+    const res = captureSync(new Error('sync status boom'));
+    process.stdout.write(JSON.stringify(res) + '\n');
+    process.exit(0);
+    break;
+  }
   case 'rejection':
     Promise.reject(new Error('rejected boom'));
     await waitFor(() => lineCount() >= 1); // reaching here at all proves no crash

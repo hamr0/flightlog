@@ -51,6 +51,26 @@ test('writeSync: appends one JSONL line per call (death path)', async (t) => {
   assert.equal(recs[0].msg, 'dying');
 });
 
+test('writeSync: returns { ok:true } when the line lands', (t) => {
+  const file = join(tmp(t), 'errors.jsonl');
+  const s = sink({ file });
+  const res = s.writeSync({ kind: 'manual', msg: 'ok' });
+  assert.deepEqual(res, { ok: true }, 'success reports ok:true, no errno');
+});
+
+test('writeSync: returns { ok:false, errno } when the sink is broken (no throw)', async (t) => {
+  const file = join(tmp(t), 'errors.jsonl');
+  const s = sink({ file, maxBytes: 0 }); // boot ok
+  rmSync(file);
+  mkdirSync(file); // sabotage: path is a directory → appendFileSync EISDIR
+
+  let res;
+  const warnings = await captureStderr(() => { res = s.writeSync({ a: 1 }); });
+  assert.equal(res.ok, false, 'a swallowed write reports ok:false instead of throwing');
+  assert.equal(res.errno, 'EISDIR', 'the errno is surfaced to the caller');
+  assert.equal(warnings.length, 1, 'still warns once to stderr (unchanged)');
+});
+
 test('boot check: a bad path throws at construction, not at first write', (t) => {
   const dir = tmp(t);
   const notADir = join(dir, 'afile');

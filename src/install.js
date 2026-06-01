@@ -20,7 +20,7 @@ let activeRejection = null;
  * without duplicating them.
  *
  * @param {InstallOptions} [opts]
- * @returns {{ capture: (err: unknown, extra?: Object) => void, captureSync: (err: unknown, extra?: Object) => void }}
+ * @returns {{ capture: (err: unknown, extra?: Object) => void, captureSync: (err: unknown, extra?: Object) => import('./types.js').WriteResult }}
  */
 export function install(opts = {}) {
   const { file, context = {}, exitOnUncaught = true, exitOnRejection = false, bootCheck = true, maxBytes } = opts;
@@ -41,10 +41,17 @@ export function install(opts = {}) {
    * async `capture()` line is lost because `process.exit()` kills the event loop
    * before the append flushes. Same record and merge as `capture`; never throws.
    * The exit-code decision stays yours: `captureSync(err); process.exit(1)`.
+   *
+   * Returns a {@link WriteResult} (`{ ok, errno? }`) so a per-invocation process can
+   * tell "landed on disk" from "silently dropped" — the sink swallows write failures,
+   * so this return value is the only in-process signal. Ignorable: existing
+   * `captureSync(err)` call sites keep working unchanged.
+   * @param {unknown} err
+   * @param {Object} [extra]
+   * @returns {import('./types.js').WriteResult}
    */
-  const captureSync = (err, extra = {}) => {
+  const captureSync = (err, extra = {}) =>
     s.writeSync(normalize(err, 'manual', { ...context, ...extra }));
-  };
 
   // Drop any handlers a previous install() registered, so we never stack a pair.
   if (activeUncaught) process.removeListener('uncaughtException', activeUncaught);

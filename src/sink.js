@@ -32,7 +32,7 @@ const FILE_MODE = 0o600;
  * error. With `bootCheck:false` the same failure is warned once and the sink
  * degrades to the normal swallow-on-write contract instead of throwing.
  * @param {SinkOptions} [opts]
- * @returns {{ write: (record: Object) => Promise<void>, writeSync: (record: Object) => void }}
+ * @returns {{ write: (record: Object) => Promise<void>, writeSync: (record: Object) => import('./types.js').WriteResult }}
  */
 export function sink({ file, maxBytes = DEFAULT_MAX_BYTES, bootCheck = true } = {}) {
   if (!file) return stderrSink();
@@ -92,8 +92,13 @@ export function sink({ file, maxBytes = DEFAULT_MAX_BYTES, bootCheck = true } = 
         rotateIfNeeded(Buffer.byteLength(line));
         appendFileSync(file, line, { mode: FILE_MODE });
         warned = false; // reset-on-success
+        return { ok: true };
       } catch (err) {
         warnOnce(err);
+        // Surface the failure as a return value (never as a throw): a short-lived
+        // caller can tell "landed" from "silently dropped". errno is included when
+        // the OS gave one (EACCES/EROFS/ENOSPC/…).
+        return err && err.code ? { ok: false, errno: err.code } : { ok: false };
       }
     },
   };
@@ -101,10 +106,12 @@ export function sink({ file, maxBytes = DEFAULT_MAX_BYTES, bootCheck = true } = 
 
 /** Sink with no file: emit each record as one JSONL line to stderr, never throw. */
 function stderrSink() {
+  /** @param {Object} record @returns {import('./types.js').WriteResult} */
   const emit = (record) => {
     try {
       process.stderr.write(JSON.stringify(record) + '\n');
-    } catch { /* swallow — a logger must never crash its host */ }
+      return { ok: true };
+    } catch { return { ok: false }; } // swallow — a logger must never crash its host
   };
-  return { write: async (record) => emit(record), writeSync: emit };
+  return { write: async (record) => { emit(record); }, writeSync: emit };
 }

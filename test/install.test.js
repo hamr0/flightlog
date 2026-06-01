@@ -62,6 +62,27 @@ test('captureSync: writes synchronously and survives an immediate process.exit',
   assert.equal(r.where, 'exit');  // per-call extra still merged
 });
 
+test('captureSync: returns { ok:true } through install() on a healthy sink', (t) => {
+  const file = join(tmp(t), 'errors.jsonl');
+  const res = spawnSync(process.execPath, [FIXTURE, file, 'manual-sync-status'], { encoding: 'utf8' });
+  assert.equal(res.status, 0);
+  assert.deepEqual(JSON.parse(res.stdout.trim()), { ok: true }, 'the write-landed signal reaches the caller');
+});
+
+test('captureSync: returns { ok:false, errno } when the sink is degraded (bootCheck:false)', (t) => {
+  // The plato gap (PRD §15.4): a per-invocation process whose error sink is broken
+  // can now SEE the dropped write and choose to exit non-zero instead of blind.
+  const dir = tmp(t);
+  const blocker = join(dir, 'blocker');
+  writeFileSync(blocker, 'x');
+  const badFile = join(blocker, 'sub', 'errors.jsonl'); // parent is a file → unwritable
+  const res = spawnSync(process.execPath, [FIXTURE, badFile, 'manual-sync-status-broken'], { encoding: 'utf8' });
+  assert.equal(res.status, 0, 'still never throws — the signal is a return value, not a crash');
+  const out = JSON.parse(res.stdout.trim());
+  assert.equal(out.ok, false, 'the dropped write is reported, not silently swallowed');
+  assert.match(out.errno, /ENOTDIR|EEXIST|ENOENT|EACCES/, 'an errno accompanies the failure');
+});
+
 test('uncaught (default): logs synchronously then exits 1', (t) => {
   const { status, recs } = run(t, 'uncaught');
   assert.equal(status, 1, 'exitOnUncaught default → exit(1) for the supervisor');

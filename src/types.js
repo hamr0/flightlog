@@ -27,6 +27,20 @@
 /** How an error reached flightlog. @typedef {('uncaught'|'unhandledRejection'|'manual')} Kind */
 
 /**
+ * What a **synchronous** write reports back — returned by {@link captureSync} so a
+ * short-lived process can tell "landed on disk" from "silently dropped" (the sink
+ * swallows write failures, so there is otherwise no in-process signal). The async
+ * {@link capture} is fire-and-forget and deliberately returns nothing — an async
+ * write can't report a result synchronously, and a Promise would re-introduce the
+ * await-footgun `captureSync` exists to avoid.
+ * @typedef {Object} WriteResult
+ * @property {boolean} ok  `true` if the line was written; `false` if the write was
+ *   swallowed (broken sink — perms/disk/quota, or a degraded `bootCheck:false` sink).
+ * @property {string} [errno]  The failure errno when the OS provided one (e.g.
+ *   `'EACCES'`, `'EROFS'`, `'ENOSPC'`); present only when `ok` is `false`.
+ */
+
+/**
  * One normalized error record — the shape of a single JSONL line. Core fields are
  * always present; any additional keys are adopter-supplied context.
  * @typedef {Object} LogRecord

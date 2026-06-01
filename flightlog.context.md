@@ -93,12 +93,21 @@ escape the net during startup.
   line, merging `{ ...context, ...extra }` (per-call `extra` wins on key clashes).
   **Async / fire-and-forget** — returns before the line is durably on disk. Never
   throws.
-- **`captureSync(err, extra?) → void`** — the **synchronous** sibling: writes the
-  line before it returns. Same record and merge as `capture`, same `manual` kind.
-  Use it when you `capture`-then-`exit` in a short-lived process — `capture()`'s
-  line would be lost when `process.exit()` kills the event loop before the async
-  append flushes. The exit-code decision stays yours; `captureSync` never exits and
-  never throws.
+- **`captureSync(err, extra?) → { ok, errno? }`** — the **synchronous** sibling:
+  writes the line before it returns. Same record and merge as `capture`, same
+  `manual` kind. Use it when you `capture`-then-`exit` in a short-lived process —
+  `capture()`'s line would be lost when `process.exit()` kills the event loop before
+  the async append flushes. The exit-code decision stays yours; `captureSync` never
+  exits and never throws. It **returns a `WriteResult`** — `{ ok: true }` if the
+  line landed, or `{ ok: false, errno }` if the sink swallowed it (broken/degraded
+  sink). Ignore it and nothing changes; check it when a per-invocation process needs
+  to know "logged" vs "silently dropped" and exit accordingly:
+  ```js
+  if (!captureSync(err, { where: 'receive' }).ok) process.exitCode = 75; // EX_TEMPFAIL — make the supervisor retry
+  process.exit(1);
+  ```
+  The async `capture()` deliberately returns nothing — it's fire-and-forget by
+  design, and a sync status can't describe an async write.
 
 ## Record shape
 

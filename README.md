@@ -81,7 +81,7 @@ One flat JSON object per error — `kind` is how it was caught, everything after
 | **uncaught exception** | log synchronously → `exit(1)` (unless `exitOnUncaught: false`) so a supervisor restarts a clean process |
 | **unhandled rejection** | log only — *intentionally suppresses Node's default crash-on-rejection*; a stray rejection shouldn't down a server. Set `exitOnRejection: true` to log (sync) then `exit(1)` for short-lived processes |
 | **manual `capture(err, extra?)`** | normalize + append `{ ...context, ...extra }`; async/fire-and-forget; never throws, never exits |
-| **manual `captureSync(err, extra?)`** | same record, written **synchronously** so it survives a `process.exit()` right after — for log-then-exit in short-lived processes |
+| **manual `captureSync(err, extra?)`** | same record, written **synchronously** so it survives a `process.exit()` right after — for log-then-exit in short-lived processes. Returns `{ ok, errno? }` so a per-invocation process can tell "logged" from "silently dropped" and set its exit code; ignorable otherwise |
 | **non-Error throws** (`throw "x"`, objects, `null`) | described faithfully, given a stack synthesized at the *call site* — not flightlog's internals |
 | **disk growth** | size cap + rotation: at `maxBytes` the file rolls to `.1` (current + one previous, bounded ~2×). `0` disables |
 | **broken sink** (perms / read-only / full disk) | swallowed — never crashes your app — and surfaced once to stderr with the errno, reset on recovery |

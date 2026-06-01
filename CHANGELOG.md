@@ -7,20 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-06-01
+
+Second-adopter feedback from **plato** (PRD §15). One additive API change, one
+repo-only reference, and documentation so adopters don't re-hit the same gaps.
+
 ### Added
-- Docs: `flightlog.context.md` now opens with a **What flightlog is and is not**
-  section, putting the is/not boundary in the first screenful (per
-  `LIBRARY_CONVENTIONS.md` §3) instead of only at the refusals section below.
-- Docs: `examples/README.md` documenting what `examples/ship.js` is and does
-  (GitHub renders it when browsing the folder), and a **Examples** row in the
-  README Docs table so the reference uploader is discoverable from the front
-  page, not just from `context.md`. Repo-only, as before.
+- **`captureSync` now returns a `WriteResult` (`{ ok, errno? }`)** so a short-lived
+  / per-invocation process can tell "landed on disk" from "silently dropped" and
+  set its exit code accordingly — the sink swallows write failures, so this return
+  value is the only in-process signal. `{ ok: true }` on success; `{ ok: false,
+  errno }` when the write was swallowed (broken or `bootCheck:false`-degraded sink).
+  **Additive and backward-compatible** — existing `captureSync(err)` call sites that
+  ignore the return are unaffected, and it still never throws. The async `capture()`
+  stays fire-and-forget `void` by design (a sync status can't describe an async
+  write). New `WriteResult` typedef in `src/types.js` flows into the generated
+  `.d.ts`. (PRD §15.4.)
 - `examples/read.js`: a zero-dep, repo-only reference reader (the symmetric
   sibling to `ship.js`) — streams the JSONL and filters by `kind` / field
   `match` / `since` / `tail`, skips torn lines, and prints the `jq` equivalent
   under each result so adopters graduate off it. Carries the operator read
-  discipline; not shipped in the package. (PRD §15.3 — second-adopter feedback
-  from plato.)
+  discipline; not shipped in the package. (PRD §15.3.)
+- Docs: `flightlog.context.md` now opens with a **What flightlog is and is not**
+  section, putting the is/not boundary in the first screenful (per
+  `LIBRARY_CONVENTIONS.md` §3) instead of only at the refusals section below.
+- Docs: `examples/README.md` documenting what `examples/ship.js` and
+  `examples/read.js` are and do (GitHub renders it when browsing the folder), and
+  an **Examples** row in the README Docs table so the reference reader/uploader is
+  discoverable from the front page, not just from `context.md`. Repo-only, as before.
 - Docs: two new gotchas in `flightlog.context.md`, both surfaced by the plato
   integration (PRD §15) so adopters don't re-hit them — **strip the query string
   when logging a web request** (flightlog never redacts; secrets in the URL would
