@@ -74,10 +74,17 @@ export async function read(file, opts = {}) {
 
 /** One-line human summary of a record — the shape `jq -r` recipes reach for. */
 export function summarize(rec) {
+  // Neutralize terminal control sequences before printing: a logged error message
+  // can carry attacker-influenced strings, and a raw ESC / CR reaching the terminal
+  // can spoof or hide output during the exact incident you're reading the log for.
+  // Render C0/DEL/C1 controls visibly (`\xNN`) instead; printable UTF-8 is untouched.
+  // The context tail below is already safe — JSON.stringify escapes controls.
+  const safe = (v) => String(v ?? '').replace(
+    /[\u0000-\u001f\u007f-\u009f]/g, (c) => '\\x' + c.charCodeAt(0).toString(16).padStart(2, '0'));
   const ctx = { ...rec };
   for (const k of ['ts', 'kind', 'name', 'message', 'stack']) delete ctx[k];
   const tail = Object.keys(ctx).length ? '  ' + JSON.stringify(ctx) : '';
-  return `${rec.ts}  ${rec.kind}  ${rec.name ?? ''}: ${rec.message ?? ''}${tail}`;
+  return `${safe(rec.ts)}  ${safe(rec.kind)}  ${safe(rec.name)}: ${safe(rec.message)}${tail}`;
 }
 
 // --- CLI -------------------------------------------------------------------

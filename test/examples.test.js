@@ -114,6 +114,29 @@ test('read.js: summarize() lifts core fields out and keeps context as a tail', (
   assert.doesNotMatch(line, /stack|"name"|"ts"/, 'core fields are not duplicated into the context tail');
 });
 
+// ---- read.js — summarize() neutralizes terminal controls (audit L5) -------
+
+test('read.js: summarize() renders control chars visibly, never raw to the terminal', () => {
+  // Every C0 control, DEL, and a C1 (0x9b = single-byte CSI) in attacker-influenced
+  // log fields must come out escaped — a raw ESC/CR could spoof or hide output.
+  const codes = [0x00, 0x07, 0x08, 0x09, 0x0a, 0x0d, 0x1b, 0x7f, 0x9b];
+  for (const code of codes) {
+    const ch = String.fromCharCode(code);
+    // Exercise every raw-interpolated field, incl. ts/kind (reachable via L2 clobber).
+    const out = summarize({ ts: `t${ch}`, kind: `manual${ch}`, name: `E${ch}`, message: `m${ch}` });
+    assert.equal(out.includes(ch), false, `0x${code.toString(16)} must not reach the terminal raw`);
+    assert.ok(out.includes('\\x' + code.toString(16).padStart(2, '0')), `0x${code.toString(16)} rendered visibly`);
+  }
+});
+
+test('read.js: summarize() leaves printable UTF-8 and ordinary lines untouched', () => {
+  assert.ok(summarize({ ts: 't', kind: 'manual', name: 'E', message: 'héllo 日本語 🚀' }).includes('héllo 日本語 🚀'));
+  assert.equal(
+    summarize({ ts: '2026-06-01T00:00:00.000Z', kind: 'manual', name: 'TypeError', message: 'x is not a function', where: 'checkout' }),
+    '2026-06-01T00:00:00.000Z  manual  TypeError: x is not a function  {"where":"checkout"}',
+  );
+});
+
 // ---- read.js — the printed jq hint is paste-safe (audit L3) ---------------
 
 test('read.js: the printed jq hint is shell-safe to paste (no command injection)',

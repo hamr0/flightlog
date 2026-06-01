@@ -257,6 +257,13 @@ stacks that can incidentally include sensitive strings. Therefore:
   a shared host. The mode applies only at creation — an existing file keeps its
   perms, and you can `chmod` if you need it more permissive. Still keep it off
   shared/world-readable *paths*; flightlog can't set perms it doesn't create.
+- **Log content can carry terminal control characters.** Error messages routinely
+  embed untrusted input, so a record's `message` may contain raw `ESC`/`CR` bytes
+  (stored JSON-escaped on disk, but live again once parsed). Printing them straight
+  to a terminal — `cat`/`tail`, or **`jq -r`** (raw output does *not* escape) — can
+  let crafted content spoof or hide output. Default `jq` (JSON output, controls
+  escaped) and the reference `examples/read.js` formatter (renders controls as
+  `\xNN`) are safe to eyeball; prefer those.
 
 "Local + private" means *it never phones home* — not *it's safe to put secrets in*.
 
