@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-06-01
+
+Second-adopter feedback from **plato** (PRD §15) plus a two-pass security audit
+(PRD §16): one additive API change, a repo-only reference reader/uploader,
+hardening of those reference scripts, and documentation so adopters don't re-hit
+the same gaps.
+
 ### Security
 - `examples/ship.js`: the reference uploader now **fails closed on a non-HTTPS
   endpoint** (`shipOnce()` returns `{ error: 'endpoint must be https' }` and sends
@@ -47,11 +54,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   injection), and read.js's control-char neutralization (every C0/DEL/C1 escaped,
   UTF-8 preserved — audit L5), plus read.js's filter/torn-line behavior and
   jq-hint completeness. Suite: 38 → 49.
-
-## [0.4.0] - 2026-06-01
-
-Second-adopter feedback from **plato** (PRD §15). One additive API change, one
-repo-only reference, and documentation so adopters don't re-hit the same gaps.
 
 ### Added
 - **`captureSync` now returns a `WriteResult` (`{ ok, errno? }`)** so a short-lived
