@@ -38,6 +38,9 @@ is a complete, working starting point.
   POSTs them as a JSON batch to an endpoint you control, and advances the offset.
 - **Consent is the only gate that matters.** `consent()` returns false → nothing is
   read and nothing leaves the disk. Default it OFF.
+- **Fails closed on a non-HTTPS endpoint** — a non-`https://` URL returns
+  `{ error: 'endpoint must be https' }` and sends nothing; error logs must not cross
+  the network in cleartext.
 - **Never throws.** A shipper must never become the bug — the same rule as the
   recorder.
 - **Zero deps.** Global `fetch` + `node:fs` only.

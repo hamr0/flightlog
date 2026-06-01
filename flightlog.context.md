@@ -240,8 +240,10 @@ diagnostics" opt-in), build it as a **separate, consent-gated layer that reads t
 JSONL** — never fold transport into flightlog. A complete, zero-dep reference
 uploader lives in the repo at
 [`examples/ship.js`](https://github.com/hamr0/flightlog/blob/main/examples/ship.js)
-(repo-only — not shipped in the package, not a dependency). Copy and adapt it; the
-moment logs land on your server you become the data controller, so disclose it.
+(repo-only — not shipped in the package, not a dependency). It is consent-gated and
+**fails closed on a non-HTTPS endpoint** (error logs must not cross the network in
+cleartext). Copy and adapt it; the moment logs land on your server you become the
+data controller, so disclose it.
 
 ## Threat model
 

@@ -27,6 +27,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   remain safe — JSON-escaped, so they can't forge a second log line; only your own
   keys can shadow core fields.) (Audit L2.)
 
+### Tests
+- `test/examples.test.js` (8 tests) — the repo-only reference scripts now have
+  coverage, locking the two security guards against regression: ship.js's
+  HTTPS-fail-closed (incl. guard-before-consent and offset-only-advances-on-ack)
+  and read.js's paste-safe jq hint (executed through a fake `jq` to prove no
+  command injection), plus read.js's filter/torn-line behavior. Suite: 38 → 46.
+
 ## [0.4.0] - 2026-06-01
 
 Second-adopter feedback from **plato** (PRD §15). One additive API change, one
