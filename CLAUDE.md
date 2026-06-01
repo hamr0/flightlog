@@ -42,6 +42,15 @@ to them.
 - No breadcrumbs / auto-captured context — the surveillance payload we refuse.
 - No symbolication / alerting / release tracking — team/scale process.
 - No restart logic — that's the supervisor's (systemd/Docker/pm2) job.
+- **No content redaction / `safePath()` helper** — flightlog is a pure pass-through
+  of adopter-supplied context; it never inspects or transforms it. A shipped
+  redactor would be trusted blindly and get the adopter's scheme wrong (a security
+  footgun with our name on it), and it'd couple us to HTTP. Stripping the query
+  string / headers is the adopter's job by design — see PRD §15.2. Documented as a
+  gotcha in `context.md`, not a feature.
+- **No first-class `proc`/role option** — multi-process-to-one-sink is real, but a
+  dedicated option just duplicates `context`; the blessed key is a *naming
+  convention* (`proc`), documented as a gotcha, not API surface (PRD §15.1).
 - **Unhandled rejections log only and do NOT exit *by default*** — note this
   *suppresses Node's own default crash-on-rejection*. Intended: a stray rejection
   shouldn't take a server down. As of 0.2.0 there is an **opt-in `exitOnRejection`**

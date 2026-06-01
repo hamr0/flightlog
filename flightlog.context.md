@@ -180,6 +180,27 @@ escape the net during startup.
   that must not die for a broken *error* sink — but it means you can lose error
   capture without a crash. Keep the default (`true`) for long-lived servers, where
   failing loud at deploy is exactly what you want.
+- **Logging a web request? Strip the query string yourself.** flightlog records
+  exactly the context you pass and never inspects it — so a tidy-looking
+  `capture(err, { where: 'request', method: req.method, path: req.url })` will
+  happily write `?token=…` / `?reset=…` secrets that ride in the URL straight to
+  disk. Pass a redacted path — `path: req.url.split('?')[0]`, or better your
+  router's matched route (`/users/:id`) — and don't pass auth headers or cookies.
+  Redaction is the adopter's job **by design**: the threat model puts ownership on
+  you, and flightlog deliberately ships no `safePath()`/redaction helper — a
+  redactor it shipped would be trusted blindly and silently get *your* scheme
+  wrong, which is worse than you owning the strip. (The safe shape:
+  `try { ... } catch (err) { capture(err, { where: 'request', method: req.method, path: req.url.split('?')[0], status: 500 }); }`.)
+- **One sink, multiple process types? Tag them with `proc`.** If a long-lived
+  server and its short-lived siblings (cron jobs, mail pipes) all append to the
+  *same* JSONL, nothing distinguishes their lines until you add a field. The
+  convention is a `proc` key in each one's static context —
+  `install({ context: { proc: 'server' } })`, `{ proc: 'cron' }`,
+  `{ proc: 'receive' }` — so you can split them with `jq 'select(.proc=="cron")'`.
+  flightlog has **no built-in process identity** (it can't know your topology, and
+  a first-class option would just duplicate `context`); `proc` is a naming
+  convention, not a special field — pick the same key across your apps so
+  cross-app queries line up.
 
 ## What flightlog will not do (the refusals *are* the product)
 

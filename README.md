@@ -95,7 +95,7 @@ One flat JSON object per error — `kind` is how it was caught, everything after
 | | |
 |---|---|
 | **[Integration Guide](flightlog.context.md)** | The complete adopter contract — options, API, record shape, gotchas, threat model. Hand it to your AI assistant. |
-| **[Examples](examples/)** | [`ship.js`](examples/ship.js) — a complete, zero-dep, consent-gated uploader for shipping the JSONL back to yourself. The layer flightlog won't do. *(repo-only)* |
+| **[Examples](examples/)** | [`read.js`](examples/read.js) — zero-dep reader recipes (filter by `kind`/`where`/`proc`, tail) that print their `jq` equivalents; [`ship.js`](examples/ship.js) — a consent-gated uploader for shipping the JSONL back to yourself. The layers flightlog won't do. Both *(repo-only)* — copy and adapt. |
 | **[PRD](docs/01-product/2026-05-31-prd.md)** | Locked decisions + *why*, success criteria, the refusals, build order. *(repo-only)* |
 | **[CHANGELOG](CHANGELOG.md)** | keep-a-changelog; an entry every release. |
 

@@ -2,7 +2,29 @@
 
 Reference code that is **not part of the package** — repo-only, never in the npm
 tarball (`examples/` is excluded from `package.json` `files`), never a dependency.
-Copy what you need into your app and adapt it.
+Copy what you need into your app and adapt it. These carry the disciplines that
+live *outside* flightlog's one job (catch → normalize → append): how to **read**
+the log, and how to **ship** it back to yourself.
+
+## `read.js` — a zero-dep reader
+
+flightlog ships no reader on purpose — "the JSONL *is* the interface," and `jq` /
+`tail` already read it. But the queries aren't obvious the first time, so `read.js`
+carries the operator discipline the way `ship.js` carries the upload one.
+
+- **`readRecords(file, filter)` / `read(file, opts)`** — stream the JSONL
+  line-by-line (handles a multi-GB log without loading it into RAM) and filter by
+  `kind`, field `match` (e.g. `{ where: 'request' }` or `{ proc: 'cron' }`), and
+  `since` an ISO timestamp; `tail: N` keeps the last N via a bounded ring buffer.
+- **Skips torn/partial lines** instead of throwing — a reader shouldn't be the bug.
+- **Runnable directly**, and it prints the `jq` equivalent under each result so you
+  can graduate off it:
+  ```
+  node examples/read.js errors.jsonl --kind uncaught
+  node examples/read.js errors.jsonl --where request --tail 20
+  node examples/read.js errors.jsonl --match proc=cron      # multi-process sink
+  ```
+- **Zero deps.** `node:fs` + `node:readline` + `node:url`.
 
 ## `ship.js` — a consent-gated uploader
 

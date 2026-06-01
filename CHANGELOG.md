@@ -15,6 +15,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (GitHub renders it when browsing the folder), and a **Examples** row in the
   README Docs table so the reference uploader is discoverable from the front
   page, not just from `context.md`. Repo-only, as before.
+- `examples/read.js`: a zero-dep, repo-only reference reader (the symmetric
+  sibling to `ship.js`) — streams the JSONL and filters by `kind` / field
+  `match` / `since` / `tail`, skips torn lines, and prints the `jq` equivalent
+  under each result so adopters graduate off it. Carries the operator read
+  discipline; not shipped in the package. (PRD §15.3 — second-adopter feedback
+  from plato.)
+- Docs: two new gotchas in `flightlog.context.md`, both surfaced by the plato
+  integration (PRD §15) so adopters don't re-hit them — **strip the query string
+  when logging a web request** (flightlog never redacts; secrets in the URL would
+  hit disk, and a shipped `safePath()` is a refused footgun), and **tag
+  multi-process sinks with a `proc` key** (convention, not API; flightlog has no
+  built-in process identity). The corresponding refusals are recorded in
+  repo-only `CLAUDE.md`.
 
 ## [0.3.1] - 2026-05-31
 
