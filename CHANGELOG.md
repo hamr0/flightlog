@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+- `examples/ship.js`: the reference uploader now **fails closed on a non-HTTPS
+  endpoint** (`shipOnce()` returns `{ error: 'endpoint must be https' }` and sends
+  nothing) — error logs can carry sensitive strings and must not cross the network
+  in cleartext. The guard runs before any read; `https://` is unaffected. (Audit
+  L1; reference code adopters copy.)
+- `examples/read.js`: the printed `jq`-equivalent hint is now **paste-safe** — jq
+  string literals are emitted via `JSON.stringify` and both the program and the
+  file path are POSIX single-quoted, so a hostile filter value (e.g.
+  `--kind 'foo"; echo X'`) or a path with spaces can't break out when copy-pasted.
+  (Audit L3; output was printed, never executed, so low severity.)
+
+### Docs
+- `flightlog.context.md`: new gotcha — **don't spread an untrusted object into
+  `context`/`extra`**. Context is merged last and is not clobber-protected, so a
+  key named `ts`/`kind`/`name`/`message`/`stack` overwrites the real core field;
+  pass an allow-listed set of fields, not a raw request/payload object. (Values
+  remain safe — JSON-escaped, so they can't forge a second log line; only your own
+  keys can shadow core fields.) (Audit L2.)
+
 ## [0.4.0] - 2026-06-01
 
 Second-adopter feedback from **plato** (PRD §15). One additive API change, one

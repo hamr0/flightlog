@@ -210,6 +210,17 @@ escape the net during startup.
   a first-class option would just duplicate `context`); `proc` is a naming
   convention, not a special field — pick the same key across your apps so
   cross-app queries line up.
+- **Don't spread an untrusted object straight into `context`/`extra`.** Context is
+  merged *last* and is **not** protected from clobbering the core fields — a key
+  named `ts`, `kind`, `name`, `message`, or `stack` in your context will overwrite
+  the real one (`capture(err, { kind: 'manual', stack: 'FAKE' })` → the record's
+  `kind`/`stack` become yours). That's intended for deliberate context, but it
+  means `capture(err, attackerControlledObject)` lets crafted keys forge the very
+  fields you'd trust during an incident. Pass an allow-listed set of fields you
+  built, not a raw request/payload object — e.g. `{ where: 'x', userId: u.id }`,
+  never `{ ...req.body }`. (Values are always safe: they're JSON-escaped, so a
+  newline or fake JSON inside a *value* can't forge a second log line — only your
+  own context *keys* can shadow core fields.)
 
 ## What flightlog will not do (the refusals *are* the product)
 

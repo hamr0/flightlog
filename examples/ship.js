@@ -19,6 +19,8 @@ import { open, stat, readFile, writeFile } from 'node:fs/promises';
  * @param {object} opts
  * @param {string} opts.file       The same `file` you passed flightlog's install().
  * @param {string} opts.endpoint   An HTTPS URL you control; receives a JSON batch.
+ *   Enforced: a non-`https://` endpoint makes `shipOnce()` fail closed (it returns
+ *   `{ error: 'endpoint must be https' }` and sends nothing).
  * @param {() => boolean | Promise<boolean>} opts.consent  Your app's opt-in check.
  *   Returns false → nothing is read and nothing leaves the disk.
  * @param {string} [opts.statePath]  Where to remember how far we've sent (a byte
@@ -53,6 +55,10 @@ export function createShipper({
     if (busy) return { sent: 0, skipped: 'busy' };
     busy = true;
     try {
+      // Fail closed on a non-HTTPS endpoint: error logs can carry sensitive
+      // strings and must not cross the network in cleartext. (A misconfig here is
+      // a config error, not a privacy event — checked before anything is read.)
+      if (!/^https:\/\//i.test(String(endpoint))) return { sent: 0, error: 'endpoint must be https' };
       if (!(await consent())) return { sent: 0, skipped: 'no-consent' };
 
       let size;

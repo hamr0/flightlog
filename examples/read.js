@@ -112,12 +112,16 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     .then((recs) => {
       for (const r of recs) console.log(raw ? JSON.stringify(r) : summarize(r));
       console.error(`\n${recs.length} record(s).  jq equivalent:`);
+      // Build the hint safely so it's paste-able verbatim: jq string literals via
+      // JSON.stringify (escaped + valid jq), and both the program and the path
+      // wrapped with POSIX single-quoting so an odd filter value can't break out.
+      const shq = (s) => `'${String(s).replace(/'/g, `'\\''`)}'`;
       const sel = [
-        opts.kind && `.kind=="${opts.kind}"`,
-        opts.match?.where && `.where=="${opts.match.where}"`,
-        opts.since && `.ts>="${opts.since}"`,
+        opts.kind && `.kind==${JSON.stringify(opts.kind)}`,
+        opts.match?.where && `.where==${JSON.stringify(opts.match.where)}`,
+        opts.since && `.ts>=${JSON.stringify(opts.since)}`,
       ].filter(Boolean).join(' and ');
-      console.error(`  jq -c '${sel ? `select(${sel})` : '.'}' ${file}` +
+      console.error(`  jq -c ${shq(sel ? `select(${sel})` : '.')} ${shq(file)}` +
         (opts.tail ? ` | tail -n ${opts.tail}` : ''));
     })
     .catch((err) => { console.error(String(err?.message ?? err)); process.exit(1); });
