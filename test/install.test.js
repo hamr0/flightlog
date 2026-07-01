@@ -125,6 +125,77 @@ test('unhandledRejection with exitOnRejection:true: writes synchronously then ex
   assert.equal(recs[0].message, 'rejected fatal');
 });
 
+test('fatal breadcrumb: uncaught with a file sink prints one stderr pointer before exit', (t) => {
+  // PRD Ask 1: the crash cause must reach the process journal (stderr → journald),
+  // not only the JSONL sink. One line, name:message + the file path, then exit 1.
+  const { status, stderr, recs } = run(t, 'uncaught');
+  assert.equal(status, 1);
+  assert.equal(recs.length, 1, 'full record still lands in the JSONL sink');
+  const lines = stderr.split('\n').filter((l) => l.startsWith('flightlog: fatal'));
+  assert.equal(lines.length, 1, 'exactly one breadcrumb, not a second copy of the stack');
+  assert.match(lines[0], /^flightlog: fatal uncaught — Error: uncaught boom \(recorded to .*errors\.jsonl\)$/);
+});
+
+test('fatal breadcrumb: exitOnRejection:true prints one stderr pointer before exit', (t) => {
+  const { status, stderr } = run(t, 'rejection-fatal');
+  assert.equal(status, 1);
+  const lines = stderr.split('\n').filter((l) => l.startsWith('flightlog: fatal'));
+  assert.equal(lines.length, 1);
+  assert.match(lines[0], /^flightlog: fatal unhandledRejection — Error: rejected fatal \(recorded to .*errors\.jsonl\)$/);
+});
+
+test('fatal breadcrumb: log-only rejection (exitOnRejection:false) emits NO breadcrumb', (t) => {
+  // A stray rejection on a healthy long-lived server must not start printing to stderr.
+  const { status, stderr, recs } = run(t, 'rejection');
+  assert.equal(status, 0);
+  assert.equal(recs.length, 1, 'record still logged to the file');
+  assert.ok(!stderr.includes('flightlog: fatal'), 'no breadcrumb on the non-fatal path');
+});
+
+test('fatal breadcrumb: no file sink → no breadcrumb (record already on stderr)', (t) => {
+  // With a stderr sink the record itself is already on stderr; a breadcrumb would
+  // just double-print. The JSONL record IS present on stderr; the pointer is not.
+  const { status, stderr } = run(t, 'uncaught-nofile');
+  assert.equal(status, 1);
+  assert.ok(!stderr.includes('flightlog: fatal'), 'no double-print when the sink is stderr');
+  assert.match(stderr, /"kind":"uncaught".*"message":"nofile boom"/, 'the full record went to stderr');
+});
+
+test('fatal breadcrumb: control chars in the message are neutralized to one safe line', (t) => {
+  // Security: an attacker-influenced message must not smuggle ESC/CR/LF into the
+  // journal (terminal spoof / forged log line). Controls render as \xNN; one line.
+  const { status, stderr } = run(t, 'uncaught-controlchars');
+  assert.equal(status, 1);
+  const lines = stderr.split('\n').filter((l) => l.startsWith('flightlog: fatal'));
+  assert.equal(lines.length, 1, 'the breadcrumb stays a single physical line');
+  assert.ok(!/[\u0000-\u001f\u007f-\u009f]/.test(lines[0]), 'no raw control bytes reach the terminal');
+  assert.match(lines[0], /boom\\x0d\\x1b\[2K\\x0ainjected/, 'CR/ESC/LF rendered visibly as \\xNN');
+});
+
+test('fatal breadcrumb: degraded sink → "record DROPPED" wording, not a false "recorded to"', (t) => {
+  // Edge case: file set but bootCheck:false + unwritable path → the write was dropped,
+  // so this stderr line is the only copy. The pointer must not claim it landed.
+  const dir = tmp(t);
+  const blocker = join(dir, 'blocker');
+  writeFileSync(blocker, 'x');
+  const badFile = join(blocker, 'sub', 'errors.jsonl'); // parent is a file → unwritable
+  const res = spawnSync(process.execPath, [FIXTURE, badFile, 'uncaught-degraded'], { encoding: 'utf8' });
+  assert.equal(res.status, 1);
+  const lines = res.stderr.split('\n').filter((l) => l.startsWith('flightlog: fatal'));
+  assert.equal(lines.length, 1);
+  assert.match(lines[0], /record DROPPED, .*errors\.jsonl unwritable\)$/);
+  assert.ok(!lines[0].includes('recorded to'), 'no optimistic "recorded to" when the write was dropped');
+});
+
+test('fatal breadcrumb: a broken stderr does not throw or change the exit code', (t) => {
+  // The process is already dying; a breadcrumb write that itself throws must be
+  // swallowed. Record still lands on the (healthy) file sink; exit stays 1.
+  const { status, recs } = run(t, 'uncaught-broken-stderr');
+  assert.equal(status, 1, 'exit code unchanged despite stderr throwing in the breadcrumb');
+  assert.equal(recs.length, 1, 'the JSONL record still landed');
+  assert.equal(recs[0].message, 'broken stderr boom');
+});
+
 test('idempotent: a second install() does not stack handlers or double-log', (t) => {
   const file = join(tmp(t), 'errors.jsonl');
   const res = spawnSync(process.execPath, [FIXTURE, file, 'double-install'], { encoding: 'utf8' });

@@ -5,6 +5,44 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2026-07-01
+
+Upstream-observability feedback from the 2026-07-01 shared-VPS incident (a plato
+crash-loop that ran ~11h invisible in `journalctl` because the cause lived only in
+flightlog's JSONL sink). A fatal exit now also leaves one line on stderr, so the
+crash cause reaches the process journal — not only the file. New observable
+behaviour, backward-compatible, **no API change**.
+
+### Added
+
+- **A fatal uncaught/rejection now also emits one line to stderr before `exit(1)`**,
+  so the cause reaches the process journal (systemd/journald, `docker logs`, the
+  supervisor's captured output) and not only the JSONL sink — the moment
+  observability matters most is a process that is *dying*, when the operator is
+  watching its live output, where a file sink is invisible. The full record still
+  goes to the JSONL; stderr gets a one-line pointer:
+  `flightlog: fatal uncaught — <name>: <message> (recorded to <file>)`. It fires
+  **only** on the two paths that already `exit(1)` (`exitOnUncaught`, and
+  `exitOnRejection: true`); the log-only rejection path is untouched, and there is
+  **no** breadcrumb when no `file` is configured (the record already went to
+  stderr). No new public API — pure always-on mechanism on the fatal path. (PRD §17.)
+
+### Security
+
+- **The fatal breadcrumb neutralizes terminal control sequences** in `name`/`message`
+  (C0 / DEL / C1 → visible `\xNN`) before writing to stderr — the same defense the
+  reference reader already applies (§16 L5), now on the shipped fatal path. Without
+  it, an attacker-influenced error message could inject a forged log line (`\n`) or
+  spoof/hide output (`ESC`/`CR`) in the journal during the exact incident review the
+  breadcrumb exists for. Found by an in-session `/security` pass over the new code
+  and regression-locked (control-chars render as `\xNN`, one physical line).
+
+### Notes
+
+- On a **degraded sink** (`bootCheck: false` + an unwritable path) the fatal write is
+  dropped, so the breadcrumb reads `record DROPPED, <file> unwritable` rather than a
+  false `recorded to <file>` — there the stderr line is the *only* copy of the cause.
+
 ## [0.5.0] - 2026-06-15
 
 ### Documentation

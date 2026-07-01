@@ -135,6 +135,20 @@ escape the net during startup.
   freezes the server. The exit paths — uncaught, a rejection under
   `exitOnRejection`, and `captureSync` — write **synchronously** so the final line
   is flushed before the process dies.
+- **Fatal breadcrumb (stderr).** On a **fatal exit** — an uncaught exception, or an
+  unhandled rejection under `exitOnRejection: true` — flightlog also writes **one
+  line to stderr** before `exit(1)`:
+  `flightlog: fatal uncaught — TypeError: x is not a function (recorded to <file>)`.
+  The full record still lands in the JSONL; this is a one-line *pointer* so the
+  cause reaches the process journal (systemd/journald, `docker logs`, your
+  supervisor's captured output) and not only the file — during a crash-loop you're
+  watching the process's live output, where a file sink is invisible. It fires
+  **only** on those two fatal paths (never on log-only rejections or on
+  `capture()`/`captureSync()`), and **not at all when you omit `file`** (the record
+  is already on stderr — no double-print). `name`/`message` are control-char-safe
+  (C0/DEL/C1 rendered as `\xNN`), and if a degraded sink (`bootCheck: false`) dropped
+  the write, the line reads `record DROPPED, <file> unwritable` instead — it's then
+  your only copy of the cause. Nothing to configure; it never throws.
 - **Rotation.** At `maxBytes` the current file is renamed to `<file>.1` (the old
   `.1` is discarded) and a fresh file starts. You keep the current file plus one
   previous segment — disk is bounded at **~2× `maxBytes`**, forever, with zero

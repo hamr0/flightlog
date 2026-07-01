@@ -53,21 +53,61 @@ export function install(opts = {}) {
   const captureSync = (err, extra = {}) =>
     s.writeSync(normalize(err, 'manual', { ...context, ...extra }));
 
+  /**
+   * One-line stderr pointer on a *fatal* exit, so the crash cause reaches the
+   * process journal (systemd/journald, `docker logs`, the supervisor's captured
+   * output) and not only the JSONL sink. During a crash-loop the operator is
+   * watching the process's own live output — a file sink is invisible there.
+   *
+   * No-op when there is no `file` sink: the record already went to stderr via the
+   * stderrSink, so a breadcrumb would just double-print. Never throws — the process
+   * is already dying, and a broken stderr must not mask the exit or change its code.
+   * @param {unknown} err  The thrown value / rejection reason.
+   * @param {import('./types.js').Kind} kind  'uncaught' | 'unhandledRejection'.
+   * @param {boolean} wrote  Whether the JSONL write landed — so the pointer doesn't
+   *   claim "recorded to <file>" when a degraded sink actually dropped the record.
+   */
+  const fatalBreadcrumb = (err, kind, wrote) => {
+    if (!file) return;
+    try {
+      // Neutralize terminal control sequences before printing: name/message can carry
+      // attacker-influenced strings, and a raw ESC / CR / LF reaching the journal can
+      // spoof or hide output — or forge an extra log line — during the exact incident
+      // you're reading this for. Render C0/DEL/C1 visibly (`\xNN`); this also keeps the
+      // breadcrumb to one physical line. Matches examples/read.js summarize(). `file`
+      // is trusted adopter config, so it is not neutralized.
+      const safe = (v) => String(v).replace(
+        /[\u0000-\u001f\u007f-\u009f]/g, (c) => '\\x' + c.charCodeAt(0).toString(16).padStart(2, '0'));
+      // Same name/message extraction as normalize() — Error keeps its own, anything
+      // else is stringified — so the pointer matches the JSONL record's name:message.
+      const name = safe(err instanceof Error ? err.name : 'Error');
+      const msg = safe(err instanceof Error ? err.message : String(err));
+      // Honest about where the record is: on a degraded sink (bootCheck:false + an
+      // unwritable path) the write was dropped, so this stderr line is the ONLY copy.
+      const where = wrote ? `recorded to ${file}` : `record DROPPED, ${file} unwritable`;
+      process.stderr.write(`flightlog: fatal ${kind} — ${name}: ${msg} (${where})\n`);
+    } catch { /* stderr gone — stay quiet, still exit */ }
+  };
+
   // Drop any handlers a previous install() registered, so we never stack a pair.
   if (activeUncaught) process.removeListener('uncaughtException', activeUncaught);
   if (activeRejection) process.removeListener('unhandledRejection', activeRejection);
 
   activeUncaught = (err) => {
     // Sync write so the final line is on disk before we exit.
-    s.writeSync(normalize(err, 'uncaught', context));
-    if (exitOnUncaught) process.exit(1);
+    const res = s.writeSync(normalize(err, 'uncaught', context));
+    if (exitOnUncaught) {
+      fatalBreadcrumb(err, 'uncaught', res.ok); // pointer to the journal before we die
+      process.exit(1);
+    }
   };
   activeRejection = (reason) => {
     if (exitOnRejection) {
       // Opt-in fatal path: write *synchronously* (the line is guaranteed before we
       // die), then exit(1). For short-lived processes where a silent exit-0 would
       // be misread as success (e.g. a mail pipe reporting "delivered").
-      s.writeSync(normalize(reason, 'unhandledRejection', context));
+      const res = s.writeSync(normalize(reason, 'unhandledRejection', context));
+      fatalBreadcrumb(reason, 'unhandledRejection', res.ok); // pointer to the journal
       process.exit(1);
     } else {
       // Default: log only — intentionally does NOT exit. Registering this handler

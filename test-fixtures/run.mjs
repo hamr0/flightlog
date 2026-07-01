@@ -48,11 +48,16 @@ if (scenario === 'manual-sync-status-broken') {
 const exitOnUncaught = exitFlag !== 'false';
 const exitOnRejection = scenario === 'rejection-fatal';
 const withContext = scenario !== 'manual-bare';
+// 'uncaught-nofile' installs a stderr sink (no file) to prove the fatal breadcrumb
+// is suppressed there — the record is already on stderr, so no double-print.
 const { capture, captureSync } = install({
-  file,
+  file: scenario === 'uncaught-nofile' ? undefined : file,
   context: withContext ? { app: 'fix', release: 'v1' } : undefined,
   exitOnUncaught,
   exitOnRejection,
+  // 'uncaught-degraded': a bad path with bootCheck:false → the sink degrades instead
+  // of throwing at boot, so the fatal write is dropped and the breadcrumb must say so.
+  bootCheck: scenario !== 'uncaught-degraded',
   maxBytes: 0, // rotation is M2's concern; keep it out of these tests
 });
 
@@ -106,6 +111,23 @@ switch (scenario) {
     break;
   case 'uncaught': // exitOnUncaught default true → handler logs (sync) then exit(1)
     setTimeout(() => { throw new Error('uncaught boom'); }, 10);
+    break;
+  case 'uncaught-nofile': // no file → stderr sink; fatal handler must NOT breadcrumb
+    setTimeout(() => { throw new Error('nofile boom'); }, 10);
+    break;
+  case 'uncaught-broken-stderr':
+    // A broken stderr must not throw out of the fatal handler or change the exit
+    // code. Break stderr AFTER the file write path is proven healthy, then throw.
+    process.stderr.write = () => { throw new Error('stderr gone'); };
+    setTimeout(() => { throw new Error('broken stderr boom'); }, 10);
+    break;
+  case 'uncaught-degraded': // bad path + bootCheck:false → write dropped, breadcrumb says so
+    setTimeout(() => { throw new Error('degraded boom'); }, 10);
+    break;
+  case 'uncaught-controlchars':
+    // Attacker-influenced message with CR + ESC + LF: the breadcrumb must render them
+    // as \xNN and stay one physical line (no terminal spoof, no forged log line).
+    setTimeout(() => { throw new Error('boom\r\x1b[2K\ninjected'); }, 10);
     break;
   case 'uncaught-nonerror': // non-Error throw exercises normalize integration
     setTimeout(() => { throw 'string boom'; }, 10);

@@ -57,7 +57,7 @@ try { await risky(); } catch (err) { capture(err, { where: "checkout", userId })
 try { main(); } catch (err) { captureSync(err, { where: "receive" }); process.exit(1); }
 ```
 
-That's the whole wiring. Uncaught exceptions log synchronously then `exit(1)` (your supervisor restarts clean); unhandled rejections log and stay alive (set `exitOnRejection: true` to make them fatal); `capture()` is fire-and-forget while `captureSync()` flushes before you exit; neither throws.
+That's the whole wiring. Uncaught exceptions log synchronously then `exit(1)` (your supervisor restarts clean); unhandled rejections log and stay alive (set `exitOnRejection: true` to make them fatal); `capture()` is fire-and-forget while `captureSync()` flushes before you exit; neither throws. On a **fatal exit** flightlog also drops one pointer line on stderr (`flightlog: fatal uncaught — … (recorded to <file>)`) so the cause reaches journald / `docker logs`, not only the JSONL.
 
 **Wiring it into a real app?** Hand your AI assistant the integration guide and describe what you want:
 
@@ -84,11 +84,12 @@ One flat JSON object per error — `kind` is how it was caught, everything after
 | **manual `captureSync(err, extra?)`** | same record, written **synchronously** so it survives a `process.exit()` right after — for log-then-exit in short-lived processes. Returns `{ ok, errno? }` so a per-invocation process can tell "logged" from "silently dropped" and set its exit code; ignorable otherwise |
 | **non-Error throws** (`throw "x"`, objects, `null`) | described faithfully, given a stack synthesized at the *call site* — not flightlog's internals |
 | **disk growth** | size cap + rotation: at `maxBytes` the file rolls to `.1` (current + one previous, bounded ~2×). `0` disables |
+| **fatal exit** (uncaught, or rejection under `exitOnRejection`) | besides the JSONL record, one pointer line to stderr before `exit(1)` — `flightlog: fatal <kind> — <name>: <message> (recorded to <file>)` — so the cause reaches journald / `docker logs`, not only the file. Control-char-safe; no-op when `file` is omitted |
 | **broken sink** (perms / read-only / full disk) | swallowed — never crashes your app — and surfaced once to stderr with the errno, reset on recovery |
 | **boot-time check** | `install()` probes the sink and, by default, throws on a bad path — fail loud at startup. `bootCheck: false` warns-once instead, for short-lived/per-invocation processes (cron, mail pipes) where a fatal boot would take down the real work |
 | **file perms** | created `0600` (owner-only) so error data isn't world-readable on a shared host |
 
-34 tests pass on CI (Node 22): unit (`normalize` on every throw shape), integration (rotation, self-failure warn-once, boot check, `0600` perms), subprocess (the crash policy, each `kind`, `captureSync` surviving an immediate exit, `exitOnRejection`, and `bootCheck: false` surviving an unwritable sink end to end), and a **packed-tarball E2E** that extracts the real artifact and imports it by bare specifier.
+56 tests pass on CI (Node 22): unit (`normalize` on every throw shape), integration (rotation, self-failure warn-once, boot check, `0600` perms), subprocess (the crash policy, each `kind`, `captureSync` surviving an immediate exit, `exitOnRejection`, the fatal-exit stderr breadcrumb — present/suppressed, control-char-safe, degraded-sink wording — and `bootCheck: false` surviving an unwritable sink end to end), and a **packed-tarball E2E** that extracts the real artifact and imports it by bare specifier.
 
 ## Docs
 
