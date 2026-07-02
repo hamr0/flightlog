@@ -91,15 +91,6 @@ One flat JSON object per error — `kind` is how it was caught, everything after
 
 56 tests pass on CI (Node 22): unit (`normalize` on every throw shape), integration (rotation, self-failure warn-once, boot check, `0600` perms), subprocess (the crash policy, each `kind`, `captureSync` surviving an immediate exit, `exitOnRejection`, the fatal-exit stderr breadcrumb — present/suppressed, control-char-safe, degraded-sink wording — and `bootCheck: false` surviving an unwritable sink end to end), and a **packed-tarball E2E** that extracts the real artifact and imports it by bare specifier.
 
-## Docs
-
-| | |
-|---|---|
-| **[Integration Guide](flightlog.context.md)** | The complete adopter contract — options, API, record shape, gotchas, threat model. Hand it to your AI assistant. |
-| **[Examples](examples/)** | [`read.js`](examples/read.js) — zero-dep reader recipes (filter by `kind`/`where`/`proc`, tail) that print their `jq` equivalents; [`ship.js`](examples/ship.js) — a consent-gated uploader for shipping the JSONL back to yourself. The layers flightlog won't do. Both *(repo-only)* — copy and adapt. |
-| **[PRD](docs/01-product/2026-05-31-prd.md)** | Locked decisions + *why*, success criteria, the refusals, build order. *(repo-only)* |
-| **[CHANGELOG](CHANGELOG.md)** | keep-a-changelog; an entry every release. |
-
 ## flightlog + pulselog — a lightweight server-log suite
 
 Two halves of one observability story for apps you run yourself: a **zero-dep,
