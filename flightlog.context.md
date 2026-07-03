@@ -9,6 +9,11 @@ This file is the complete contract: every option, the whole API, what flightlog
 deliberately does **not** do, the gotchas, and the threat model. If you read one
 file before adopting, read this one.
 
+For a deployment walkthrough — wiring `install()` on a real VPS, plus the optional
+pulselog pairing (health checks, weekly digest that rolls these errors up, backups) —
+see the [Implementation Guide](IMPLEMENTATION_GUIDE.md) (Part A is flightlog; it stands
+alone and needs no pulselog).
+
 > **Status:** functional since `0.1.0` (see the CHANGELOG for the current release).
 > `0.0.1` is a name placeholder that throws on import — don't depend on it.
 

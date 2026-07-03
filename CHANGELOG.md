@@ -5,6 +5,16 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.2] - 2026-07-03
+
+### Added
+- **`IMPLEMENTATION_GUIDE.md`** — a copy-paste, VPS-ready deployment walkthrough, now
+  **shipped in the package** (added to the `files` allowlist) and linked from the README
+  and `flightlog.context.md`. Two standalone parts — **Part A** (flightlog, in-app error
+  capture) and **Part B** (pulselog: health, digest, backup, off-box watch) — so either
+  tool can be adopted alone. The **same guide ships in both packages, with no dependency**
+  between them. Docs/packaging only — no code or API change.
+
 ## [0.6.1] - 2026-07-02
 
 ### Changed
@@ -236,7 +246,8 @@ First functional release — the global error net, packaged once (see the PRD in
   package throws on import directing users to the repo. Reserves `flightlog`
   while `0.1.0` is built.
 
-[Unreleased]: https://github.com/hamr0/flightlog/compare/v0.6.1...HEAD
+[Unreleased]: https://github.com/hamr0/flightlog/compare/v0.6.2...HEAD
+[0.6.2]: https://github.com/hamr0/flightlog/compare/v0.6.1...v0.6.2
 [0.6.1]: https://github.com/hamr0/flightlog/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/hamr0/flightlog/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/hamr0/flightlog/compare/v0.4.0...v0.5.0
