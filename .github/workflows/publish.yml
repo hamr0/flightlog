@@ -111,6 +111,20 @@ jobs:
             exit 0
           fi
           NAME=$(node -p "require('./package.json').name")
+          # Pin @types/node to the major THIS package builds against, don't float.
+          # Measured: unpinned it resolved to 26.x against a package built on ^22 and
+          # failed a shipped .d.ts with TS2344 — a red publish gate caused by a
+          # DefinitelyTyped release, not by the commit being published.
+          TYPES_NODE=$(node -p "
+            const p=require('./package.json');
+            const d=(p.devDependencies||{})['@types/node'];
+            if (d) process.stdout.write(d);
+            else {
+              const e=((p.engines||{}).node||'').match(/(\d+)/);
+              process.stdout.write(e ? '^'+e[1] : 'latest');
+            }
+            ''")
+          echo "pinning @types/node to: $TYPES_NODE"
           mkdir -p /tmp/pkg /tmp/consumer
           npm pack --pack-destination /tmp/pkg
           cd /tmp/consumer
@@ -154,7 +168,7 @@ jobs:
           const pick = (r: LogRecord): string => r.message;
           console.log(pick({ ts: '', kind: 'manual', name: 'Error', message: '', stack: '' }));
           TS
-          npm install --no-audit --no-fund /tmp/pkg/*.tgz typescript @types/node
+          npm install --no-audit --no-fund /tmp/pkg/*.tgz typescript "@types/node@$TYPES_NODE"
           ./node_modules/.bin/tsc
       - name: Publish
         if: steps.check.outputs.skip == 'false'
