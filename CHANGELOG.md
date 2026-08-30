@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Publish workflow gates on types being usable BY AN ADOPTER, not just internally.** `npm run typecheck` (`tsc --noEmit`) only checks the *source*; it cannot see the generated `.d.ts` as resolved from inside `node_modules`, which is the one thing adopters actually consume. The publish workflow now packs the tarball, installs it into a clean consumer project, and compiles the README quickstart against it — so a package whose published types are broken cannot reach the registry. The quickstart **dereferences** what the API returns (`res.ok`, `res.errno`, `LogRecord.message`) rather than merely calling it: a check that only *calls* `install()` would still pass if the return were annotated as a bare `object`, which is the exact bug class this gate exists to catch. Verified locally with negative controls (a bad dereference fails `TS2339`, a bad option type fails `TS2322`). CI only — no runtime or published-artifact change.
+
+### Changed
+
+- **`prepublishOnly` → `prepack` for the type build.** `npm pack` does not run `prepublishOnly`, so the adopter gate above would have packed a tarball containing no `.d.ts` and silently tested nothing. `prepack` fires for **both** `npm pack` and `npm publish`, so the gate now compiles against the same bytes that ship. No change to what the published package contains.
+
 ### Fixed
 
 - **Publish workflow pinned to `npm@11` — npm 12.0.0's `npm publish --provenance` is broken.** The job ran `npm install -g npm@latest`, which started resolving to npm 12.0.0 (released 2026-07-09) on the Node 22 runner. npm 12's `libnpmpublish` provenance code does `require('sigstore')`, but the tarball bundles only the `@sigstore/*` scoped packages — so `--provenance` dies with `MODULE_NOT_FOUND` and the publish fails outright. npm@11 bundles `sigstore` and publishes fine. Pinned to the major rather than floating on `@latest`. Revisit once npm ships a provenance fix. CI only — no runtime or published-artifact change.
