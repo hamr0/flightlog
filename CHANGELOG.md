@@ -15,7 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **`prepublishOnly` → `prepack` for the type build.** `npm pack` does not run `prepublishOnly`, so the adopter gate above would have packed a tarball containing no `.d.ts` and silently tested nothing. `prepack` fires for **both** `npm pack` and `npm publish`, so the gate now compiles against the same bytes that ship. No change to what the published package contains.
 - **Agent/IDE scratch is gitignored and de-tracked (`.claude/`, `.litectx/`, `.idea/`).** Per-machine agent and IDE state is no part of the package — it regenerates locally and only added noise and churn. Now ignored, and any already-committed copies removed from tracking (local files kept on disk). Functional dot-paths (`.github/`, `.gitignore`, `.npmignore`, `.mcp.json`) stay tracked. Repo hygiene only.
-- **IMPLEMENTATION_GUIDE.md: systemd-hardening fixes (postdrop/NoNewPrivileges trap) and corrected Part B section cross-refs.** Mirrored byte-for-byte from pulselog's copy. Docs only — no runtime change.
+- **IMPLEMENTATION_GUIDE.md: systemd-hardening fixes (postdrop/NoNewPrivileges trap) and corrected Part B section cross-refs.** Mirrored byte-for-byte from pulselog's copy. Part B of the guide now documents pulselog 0.8.0+ features (`--test-alert`, `mailTimeoutMs`, the `kind:"delivery"` record, exit 1 when every delivery path fails), so it requires pulselog >= 0.8.0, and this flightlog release must not be cut until pulselog 0.8.0 is on npm. Docs only — no runtime change.
 
 ### Fixed
 
