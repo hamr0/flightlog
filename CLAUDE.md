@@ -19,7 +19,7 @@ to them.
 
 ## Where the rationale lives
 
-- **[`docs/01-product/2026-05-31-prd.md`](docs/01-product/2026-05-31-prd.md)** — the
+- **[`docs/product/2026-05-31-prd.md`](docs/product/2026-05-31-prd.md)** — the
   PRD: locked decisions + *why*, success criteria, Go/No-Go gate. The durable
   reasoning that doesn't belong in the adopter-facing docs lives here.
 
@@ -76,5 +76,10 @@ the `package.json` `files` allowlist.
 <!-- AGENT_RULES:START -->
 Consult when building something new or adding a feature — a standards guide, not hot
 context like MEMORY.md above:
-@.claude/remember/AGENT_RULES.md
+.claude/remember/AGENT_RULES.md
 <!-- AGENT_RULES:END -->
+
+<!-- DOCS_INDEX:START -->
+Docs map: `docs/index.md` — every doc in this project, with line counts.
+Search this corpus instead of reading it whole: `/docs-builder search <query words>`
+<!-- DOCS_INDEX:END -->

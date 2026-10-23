@@ -5,7 +5,7 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.6.3] - 2026-10-23
 
 ### Added
 - **The publish workflow now fails when `package-lock.json`'s version drifts from `package.json`.** npm writes that field on install, so a release that bumps `package.json` without running one leaves it behind — and nothing caught it: `npm ci` fails when the lockfile's *dependency* entries disagree, but never checks the lockfile's copy of the project's own version. `scripts/check-lockfile.mjs` (`npm run check:lockfile`) compares both places npm writes it and runs in the publish workflow. No lockfile is not a failure.
@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **`prepublishOnly` → `prepack` for the type build.** `npm pack` does not run `prepublishOnly`, so the adopter gate above would have packed a tarball containing no `.d.ts` and silently tested nothing. `prepack` fires for **both** `npm pack` and `npm publish`, so the gate now compiles against the same bytes that ship. No change to what the published package contains.
 - **Agent/IDE scratch is gitignored and de-tracked (`.claude/`, `.litectx/`, `.idea/`).** Per-machine agent and IDE state is no part of the package — it regenerates locally and only added noise and churn. Now ignored, and any already-committed copies removed from tracking (local files kept on disk). Functional dot-paths (`.github/`, `.gitignore`, `.npmignore`, `.mcp.json`) stay tracked. Repo hygiene only.
+- **IMPLEMENTATION_GUIDE.md: systemd-hardening fixes (postdrop/NoNewPrivileges trap) and corrected Part B section cross-refs.** Mirrored byte-for-byte from pulselog's copy. Part B of the guide now documents pulselog 0.8.0+ features (`--test-alert`, `mailTimeoutMs`, the `kind:"delivery"` record, exit 1 when every delivery path fails), so it requires pulselog >= 0.8.0, and this flightlog release must not be cut until pulselog 0.8.0 is on npm. Docs only — no runtime change.
 
 ### Fixed
 
@@ -264,7 +265,8 @@ First functional release — the global error net, packaged once (see the PRD in
   package throws on import directing users to the repo. Reserves `flightlog`
   while `0.1.0` is built.
 
-[Unreleased]: https://github.com/hamr0/flightlog/compare/v0.6.2...HEAD
+[Unreleased]: https://github.com/hamr0/flightlog/compare/v0.6.3...HEAD
+[0.6.3]: https://github.com/hamr0/flightlog/compare/v0.6.2...v0.6.3
 [0.6.2]: https://github.com/hamr0/flightlog/compare/v0.6.1...v0.6.2
 [0.6.1]: https://github.com/hamr0/flightlog/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/hamr0/flightlog/compare/v0.5.0...v0.6.0
